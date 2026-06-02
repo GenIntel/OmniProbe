@@ -1,0 +1,15 @@
+name: classification_imagenet_linear
+mode: default
+data_root: ${oc.env:IMAGENET_ROOT,data/imagenet}
+train_split: ordered_train
+val_split: ordered
+image_size: 224
+batch_size: 256
+num_workers: 8
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+epochs: 10
+lr: 0.1
+momentum: 0.9
+weight_decay: 0.0
+warmup_epochs: 1
+label_smoothing: 0.0

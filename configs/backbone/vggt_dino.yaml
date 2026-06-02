@@ -1,0 +1,6 @@
+_target_: omniprobe.models.vggt.VGGTBackbone
+checkpoint_path: ${oc.env:VGGT_CKPT,null}
+output: dense
+layer: -1
+feature_source: patch_embed
+image_mean: raw

@@ -1,0 +1,31 @@
+system:
+  random_seed: 400
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+dataset:
+  root: ${oc.env:ADE20K_ROOT,data/ADEChallengeData2016}
+  crop_size: 448
+  image_mean: ${oc.select:backbone.image_mean,imagenet}
+  batch_size: 64
+  val_batch_size: 64
+  num_workers: 8
+  shuffle: false
+  val_iters: null
+  train_mask_size: 100
+  val_mask_size: 100
+  ignore_index: 0
+  num_classes: 151
+
+checkpoint_path: outputs/ade20k/best.ckpt
+visualize: false
+visualization_dir: outputs/ade20k/visualizations_eval
+num_visualizations: 6
+
+task_name: segmentation_ade20k_eval
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

@@ -1,0 +1,6 @@
+_target_: omniprobe.models.croco.CroCoBackbone
+checkpoint_path: ${oc.env:CROCO_CKPT,croco/CroCo_V2_ViTBase_BaseDecoder.pth}
+pos_embed_override: null
+return_multilayer: null
+stride: 16
+layer: -1

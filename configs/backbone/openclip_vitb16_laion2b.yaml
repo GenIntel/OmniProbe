@@ -1,0 +1,6 @@
+_target_: omniprobe.models.clip.CLIP
+arch: "ViT-B-16"
+checkpoint: "openclip/clip_vitb16_laion2b.pt"
+output: dense
+layer: -1
+return_multilayer: false

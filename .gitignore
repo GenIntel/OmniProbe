@@ -1,0 +1,61 @@
+# Project outputs
+outputs/
+data/
+logs/
+results/
+viz/
+checkpoints/
+
+# Legacy experiment dirs
+depth_exps/
+snorm_exps/
+sseg_exps/
+imagenet3d/
+
+# SLURM scripts
+scripts/slurm/
+
+# Archives
+logs_archive.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Editors
+.*.swp
+.vscode/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Jupyter
+.ipynb_checkpoints
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Log files
+*.err
+*.out
+*.log

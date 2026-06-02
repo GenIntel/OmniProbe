@@ -1,0 +1,53 @@
+# SOCO Linear Probe Evaluation Only Config
+# Loads a pre-trained probe and evaluates on test split
+
+# Feature settings
+multilayer: False
+mask_feats: True
+
+# Data configuration
+data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
+pair_subdir: PairAnnotations/intra
+train_pair_subdir: PairAnnotations/trainsplits/train
+test_pair_subdir: PairAnnotations/trainsplits/test
+classes: "all"
+max_pairs: null
+image_size: 800
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: False
+
+# Evaluation threshold
+thresh: 0.10
+
+random_seed: 42
+
+# Skip pre-training evaluation
+eval_before_training: False
+
+# Linear probe configuration
+probe:
+  type: "linear"
+  init_mode: "identity"
+  bias: True
+
+# Training disabled - evaluation only
+train:
+  enabled: False
+  epochs: 1
+  lr: 0.001
+  batch_size: 32
+  num_workers: 4
+  temperature: 0.07
+
+# Path to load trained probe (set via command line)
+# probe_checkpoint: outputs/<date>/<time>_soco_lin_<backbone>/trained_probe.pth
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_soco_linear_probe_eval
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

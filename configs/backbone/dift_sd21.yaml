@@ -1,0 +1,5 @@
+_target_: omniprobe.models.stablediffusion.DIFT
+model_id: "sd2-community/stable-diffusion-2-1"
+time_step: 1
+layer: 1
+output: dense

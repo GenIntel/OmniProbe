@@ -1,0 +1,6 @@
+_target_: omniprobe.datasets.tapvid.TAPVidDataset
+tapvid_root: ${oc.env:TAPVID_DAVIS_ROOT,data/tapvid_davis.pkl}
+dataset_type: davis_first
+resize_to: 256
+query_stride: 5
+max_videos: null

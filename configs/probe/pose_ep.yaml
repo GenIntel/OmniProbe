@@ -1,0 +1,3 @@
+_target_: omniprobe.models.pose_ep_probe.PoseEPProbe
+num_queries: 8
+num_heads: 1

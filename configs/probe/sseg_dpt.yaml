@@ -1,0 +1,4 @@
+_target_: omniprobe.models.probes.SegmentationHead
+head_type: DPTClassifier
+hidden_dim: 512
+kernel_size: 3

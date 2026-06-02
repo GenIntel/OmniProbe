@@ -1,0 +1,6 @@
+_target_: omniprobe.datasets.navi.NAVI
+path: ${oc.env:NAVI_ROOT,data/navi_v1}
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+augment_train: True
+bbox_crop: True
+relative_depth: True

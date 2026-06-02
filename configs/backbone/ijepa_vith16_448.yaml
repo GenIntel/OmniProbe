@@ -1,0 +1,3 @@
+_target_: omniprobe.models.ijepa.IJEPA
+model_type: IN1K-vit.h.16-448px-300e
+checkpoint_path: ${oc.env:IJEPA_CKPT,ijepa/IN1K-vit.h.16-448px-300e.pth.tar}

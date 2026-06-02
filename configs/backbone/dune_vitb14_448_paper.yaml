@@ -1,0 +1,5 @@
+_target_: omniprobe.models.dune.DUNE
+arch: "vitb14_448_paper"
+output: dense
+layer: -1
+return_multilayer: false

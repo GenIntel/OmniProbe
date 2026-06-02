@@ -1,0 +1,6 @@
+_target_: omniprobe.models.dinov3.DinoV3
+arch: "vit7b16"
+output: dense
+layer: -1
+return_multilayer: false
+weights: "SAT493M"

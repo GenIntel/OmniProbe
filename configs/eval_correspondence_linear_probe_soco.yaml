@@ -1,0 +1,56 @@
+# SOCO Linear Probe Training + Evaluation Config
+# Uses predefined train/test splits from PairAnnotations/trainsplits/
+
+# Feature settings
+multilayer: False
+mask_feats: True
+
+# Data configuration
+data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
+pair_subdir: PairAnnotations/intra
+train_pair_subdir: PairAnnotations/trainsplits/train
+test_pair_subdir: PairAnnotations/trainsplits/test
+classes: "all"  # or list of specific classes
+max_pairs: null
+image_size: 800
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: False
+
+# Evaluation threshold
+thresh: 0.10
+
+random_seed: 42
+
+# Whether to evaluate before training (sanity check)
+eval_before_training: True
+
+# Linear probe configuration
+probe:
+  type: "linear"  # "linear", "positive_linear", "identity", or "mlp"
+  init_mode: "identity"  # "identity", "random", or "xavier"
+  bias: True
+  # min_weight: 1e-6  # only used for positive_linear
+  # output_dim: 768  # defaults to input_dim if not specified
+  # hidden_dim: 768  # only used for mlp
+
+# Training configuration
+train:
+  enabled: True
+  epochs: 4
+  lr: 0.001
+  batch_size: 32  # smaller due to larger images (800x800)
+  num_workers: 4
+  temperature: 0.07
+  weight_decay: 0.0
+  use_scheduler: True
+  eval_every: 1
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_soco_linear_probe
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

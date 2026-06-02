@@ -1,0 +1,4 @@
+_target_: omniprobe.models.sam.SAM
+arch: vit_h
+output: dense
+layer: -1

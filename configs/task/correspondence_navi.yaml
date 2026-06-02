@@ -1,0 +1,8 @@
+name: correspondence_navi
+mode: default
+random_seed: 8
+scale_factor: 0.25
+num_corr: 1000
+multilayer: false
+dataset:
+  path: ${oc.env:NAVI_ROOT,data/navi_v1}

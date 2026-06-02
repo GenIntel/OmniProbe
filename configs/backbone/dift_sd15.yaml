@@ -1,0 +1,5 @@
+_target_: omniprobe.models.stablediffusion.DIFT
+model_id: ${oc.env:DIFT_SD15_MODEL_ID,runwayml/stable-diffusion-v1-5}
+time_step: 1
+layer: 1
+output: dense

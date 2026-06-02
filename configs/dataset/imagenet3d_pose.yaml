@@ -1,0 +1,6 @@
+_target_: omniprobe.datasets.imagenet3d_pose.ImageNet3DPoseDataset
+root: ${oc.env:IMAGENET3D_ROOT,data/ImageNet3D}
+image_size: 224
+num_bins: 40
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+augment: true

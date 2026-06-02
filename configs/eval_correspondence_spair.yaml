@@ -1,0 +1,21 @@
+random_seed: 8
+split: test
+image_size: 800
+eval_class: all
+num_instances: 200 
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: False
+multilayer: False
+soft_eval: False
+soft_eval_beta: 0.02
+soft_eval_window: 7
+note: ""
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_spair
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

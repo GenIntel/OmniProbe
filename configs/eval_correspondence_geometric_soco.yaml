@@ -1,0 +1,24 @@
+random_seed: 8
+data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
+pair_subdir: PairAnnotations/intra
+image_size: 800
+num_patches: 60
+fixed_patched_size: false
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: false
+classes: all
+max_pairs: null
+thresh: 0.10
+mask_feats: false
+multilayer: false
+only_multi_candidate_eval: false
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_geometric_soco
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

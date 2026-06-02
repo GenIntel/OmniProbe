@@ -1,0 +1,6 @@
+_target_: omniprobe.models.pixio.PIXIO
+arch: "vit1b16"
+output: dense
+layer: -1
+return_multilayer: false
+weights: 'pixio/pixio_vit1b16.pth'

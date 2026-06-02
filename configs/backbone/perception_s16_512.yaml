@@ -1,0 +1,4 @@
+_target_: omniprobe.models.perception.PerceptionBackbone
+model_type: PE-Spatial-S16-512
+checkpoint_path: pe/PE-Spatial-S16-512.pt
+layer: -1

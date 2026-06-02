@@ -1,0 +1,4 @@
+_target_: omniprobe.models.ibot.iBOT
+model_type: small
+output: dense
+layer: -1

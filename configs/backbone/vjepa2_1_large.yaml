@@ -1,0 +1,5 @@
+_target_: omniprobe.models.vjepa2.VJEPA2Backbone
+model_type: vjepa2_1_vit_large_384
+output: dense
+layer: -1
+checkpoint_path: "vjepa2/vjepa2_1_vitl_dist_vitG_384.pt"

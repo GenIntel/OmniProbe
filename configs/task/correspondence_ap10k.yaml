@@ -1,0 +1,3 @@
+name: correspondence_ap10k
+mode: default
+data_root: ${oc.env:AP10K_ROOT,data/AP-10K}

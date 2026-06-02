@@ -1,0 +1,5 @@
+_target_: omniprobe.models.clip.CLIP
+arch: "ViT-H-14"
+checkpoint: "laion2b_s32b_b79k"
+output: dense
+layer: -1

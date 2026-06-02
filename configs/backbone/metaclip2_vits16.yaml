@@ -1,0 +1,6 @@
+_target_: omniprobe.models.metaclip.MetaCLIP
+arch: "vits16"
+checkpoint: "metaclip/metaclip2_s16_224px_worldwide.pt"
+output: dense
+layer: -1
+return_multilayer: false

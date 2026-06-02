@@ -1,0 +1,10 @@
+_target_: omniprobe.models.lvlm_visual.LlavaOneVisionVisualBackbone
+model_name: llava-hf/llava-onevision-qwen2-7b-ov-hf
+output: dense
+return_multilayer: false
+torch_dtype: bfloat16
+use_flash_attention: false
+cache_dir: null
+vision_feature_layer: null
+vision_feature_select_strategy: null
+image_mean: raw

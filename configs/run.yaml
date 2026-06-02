@@ -1,0 +1,11 @@
+defaults:
+  - task: correspondence_soco
+  - backbone: dinov2_b14
+  - _self_
+
+device: cuda
+results_dir: results
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task.name}_${task.mode}_${hydra:runtime.choices.backbone}

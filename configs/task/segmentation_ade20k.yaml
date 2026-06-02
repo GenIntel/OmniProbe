@@ -1,0 +1,3 @@
+name: segmentation_ade20k
+mode: train
+data_root: ${oc.env:ADE20K_ROOT,data/ADEChallengeData2016}

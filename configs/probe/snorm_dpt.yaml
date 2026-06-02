@@ -1,0 +1,5 @@
+_target_: omniprobe.models.probes.SurfaceNormalHead
+uncertainty_aware: True
+head_type: dpt
+hidden_dim: 512
+kernel_size: 3

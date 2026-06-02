@@ -1,0 +1,22 @@
+random_seed: 8
+data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
+pair_subdir: PairAnnotations/cross
+image_size: 800
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: false
+classes: all
+max_pairs: null
+thresh: 0.10
+mask_feats: false
+multilayer: false
+num_visualize: 0
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_soco_cross
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

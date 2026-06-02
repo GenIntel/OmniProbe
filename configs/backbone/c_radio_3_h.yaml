@@ -1,0 +1,4 @@
+_target_: omniprobe.models.c_radio.CRADIOv3Backbone
+version: c-radio_v3-h
+output: dense
+image_mean: raw

@@ -1,0 +1,45 @@
+random_seed: 8
+split: test
+image_size: 800
+eval_class: all
+num_instances: 1000
+eval_num_instances: 200
+image_mean: ${oc.select:backbone.image_mean,imagenet}
+use_bbox: False
+multilayer: False
+note: ""
+
+# Whether to evaluate before training (with random init)
+eval_before_training: True
+
+# Linear probe configuration
+probe:
+  type: linear  # "identity", "linear", or "mlp"
+  output_dim: null  # null means same as input_dim
+  hidden_dim: null  # only used for MLP
+  bias: True
+  init_mode: identity  # "identity", "random", or "xavier"
+
+# Training configuration
+train:
+  enabled: True
+  epochs: 3
+  lr: 0.001
+  weight_decay: 0.0
+  temperature: 0.07  # InfoNCE temperature
+  train_all_classes: True  # Train on all classes or just eval_class
+  num_instances: null  # null means use all training instances
+  eval_every: 1
+  use_scheduler: True
+  batch_size: 32  # Number of image pairs per batch
+  num_workers: 4  # DataLoader workers
+
+defaults:
+  - backbone: dinov2_b14
+  - _self_
+
+task_name: correspondence_spair_linear_probe
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task_name}_${hydra:runtime.choices.backbone}

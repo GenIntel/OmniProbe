@@ -1,0 +1,4 @@
+_target_: omniprobe.models.pose_linear_probe.PoseLinearProbe
+num_bins: 40
+hidden_dim: 0
+dropout: 0.0

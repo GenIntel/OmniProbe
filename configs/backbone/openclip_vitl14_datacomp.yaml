@@ -1,0 +1,6 @@
+_target_: omniprobe.models.clip.CLIP
+arch: "ViT-L-14"
+checkpoint: "openclip/clip_vitl14_datacomp_xl.pt"
+output: dense
+layer: -1
+return_multilayer: false
