@@ -9,7 +9,9 @@ Coverage layers:
    vendored packages under omniprobe/models/vendor/.
 """
 
+import ast
 import importlib
+from pathlib import Path
 
 import pytest
 import torch
@@ -256,4 +258,57 @@ def test_dinov3_hub_model_list():
     assert all(
         "hub_fn" in v and "feat_dim" in v
         for v in DinoV3.VARIANTS.values()
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4. Static analysis: trust_repo enforcement
+# ---------------------------------------------------------------------------
+
+def _iter_hub_load_calls(source: str):
+    """Yield AST Call nodes that look like torch.hub.load(...)."""
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (
+            isinstance(func, ast.Attribute)
+            and func.attr == "load"
+            and isinstance(func.value, ast.Attribute)
+            and func.value.attr == "hub"
+        ):
+            continue
+        yield node
+
+
+def _kw_literal(node: ast.Call, name: str):
+    """Return the literal value of keyword argument ``name``, or None."""
+    for kw in node.keywords:
+        if kw.arg == name and isinstance(kw.value, ast.Constant):
+            return kw.value.value
+    return None
+
+
+def test_all_remote_hub_loads_have_trust_repo():
+    """Every torch.hub.load that contacts a remote repo must pass trust_repo=True.
+
+    This prevents the GitHub fork-validation step from failing on compute nodes
+    that have no internet access, even when the model is already cached locally.
+    """
+    models_dir = Path(__file__).resolve().parents[1] / "omniprobe" / "models"
+    violations = []
+    for path in sorted(models_dir.glob("*.py")):
+        source = path.read_text()
+        if "torch.hub.load" not in source:
+            continue
+        for node in _iter_hub_load_calls(source):
+            has_local_source = _kw_literal(node, "source") == "local"
+            has_trust_repo = _kw_literal(node, "trust_repo") is True
+            if not has_local_source and not has_trust_repo:
+                violations.append(f"{path.name}:{node.lineno}")
+
+    assert not violations, (
+        "These torch.hub.load calls are missing trust_repo=True and will fail "
+        "on compute nodes without internet access:\n" + "\n".join(violations)
     )
