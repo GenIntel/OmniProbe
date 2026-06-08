@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as nn_F
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
+from loguru import logger
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
 from omniprobe.datasets.builder import build_loader
 from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
@@ -16,11 +16,12 @@ from omniprobe.utils.correspondence import (
     estimate_correspondence_xyz,
     project_3dto2d,
 )
+from omniprobe.utils.progress import progress
 from omniprobe.utils.transformations import so3_rotation_angle, transform_points_Rt
 
 
 def run_task(cfg: DictConfig):
-    print(f"Config: \n {OmegaConf.to_yaml(cfg)}")
+    logger.info(f"Config:\n{OmegaConf.to_yaml(cfg)}")
     device = torch.device(cfg.device) if "device" in cfg else torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )
@@ -39,7 +40,7 @@ def run_task(cfg: DictConfig):
     Rt_gt = []
     intrinsics = []
 
-    for batch in tqdm(loader):
+    for batch in progress(loader, desc="NAVI feature extraction"):
         feat_0 = model(batch["image_0"].to(device))
         feat_1 = model(batch["image_1"].to(device))
         if cfg.multilayer:
@@ -70,7 +71,7 @@ def run_task(cfg: DictConfig):
     num_instances = len(loader.dataset)
     err_3d = []
     err_2d = []
-    for i in tqdm(range(num_instances)):
+    for i in progress(range(num_instances), desc="NAVI correspondence evaluation"):
         c_xyz0, c_xyz1, c_dist, c_uv0, c_uv1 = estimate_correspondence_xyz(
             feats_0[i], feats_1[i], xyz_grid_0[i], xyz_grid_1[i], cfg.num_corr
         )
@@ -96,7 +97,7 @@ def run_task(cfg: DictConfig):
     metric_thresh = [0.01, 0.02, 0.05]
     for _th in metric_thresh:
         recall_i = 100 * (err_3d < _th).float().mean()
-        print(f"Recall at {_th:>.2f} m:  {recall_i:.2f}")
+        logger.info(f"Recall at {_th:>.2f} m:  {recall_i:.2f}")
         results.append(f"{recall_i:5.02f}")
         perf_bins_3d[_th] = float(recall_i / 100.0)
 
@@ -104,7 +105,7 @@ def run_task(cfg: DictConfig):
     px_thresh = [5, 25, 50]
     for _th in px_thresh:
         recall_i = 100 * (err_2d < _th).float().mean()
-        print(f"Recall at {_th:>3d}px:  {recall_i:.2f}")
+        logger.info(f"Recall at {_th:>3d}px:  {recall_i:.2f}")
         results.append(f"{recall_i:5.02f}")
         perf_bins_2d[_th] = float(recall_i / 100.0)
 
@@ -128,7 +129,6 @@ def run_task(cfg: DictConfig):
     output_dir = str(HydraConfig.get().run.dir)
     entry = build_result_entry(
         "navi",
-        "default",
         model,
         output_dir,
         cfg,

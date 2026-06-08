@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from loguru import logger
 
 from .utils import (
     bbox_crop,
@@ -78,7 +79,7 @@ class NAVI(torch.utils.data.Dataset):
             },
         )
         self.image_transform, self.target_transform, self.shared_transform = t_fns
-        print(f"NAVI {collection} {subpart} {model}: {len(self.instances)} instances")
+        logger.info(f"NAVI {collection} {subpart} {model}: {len(self.instances)} instances")
 
         self.pair_dataset = pair_dataset
         self.max_angle = max_angle
@@ -267,7 +268,7 @@ class NAVI(torch.utils.data.Dataset):
         for obj_id in object_names:
             scenes = list(self.data_dict[obj_id].keys())
             if "wild_set" not in scenes or len(scenes) == 1:
-                print(f"Skipping object {obj_id}.")
+                logger.info(f"Skipping object {obj_id}.")
                 continue
             else:
                 self.objects.append(obj_id)

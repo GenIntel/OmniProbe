@@ -174,7 +174,6 @@ def run_task(cfg: DictConfig) -> None:
 
     summary = build_result_entry(
             "tapvid",
-            "default",
             model,
             output_dir,
             cfg,

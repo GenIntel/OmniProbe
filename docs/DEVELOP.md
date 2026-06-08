@@ -3,8 +3,8 @@
 OmniProbe evaluates the dense features of visual foundation models. Everything runs through one entrypoint:
 
 ```bash
-python -m omniprobe.run task=<task> backbone=<backbone> [task.mode=<mode>]
-omniprobe --list-tasks      # tasks and their modes
+python -m omniprobe.run task=<task_config> backbone=<backbone>
+omniprobe --list-tasks      # runnable task configs
 omniprobe --list-backbones  # available backbone configs
 ```
 
@@ -13,9 +13,9 @@ Where things live:
 | Concern | Code | Config |
 |---------|------|--------|
 | Backbones | `omniprobe/models/<name>.py` | `configs/backbone/<name>.yaml` |
-| Tasks | `omniprobe/tasks/__init__.py` (registry) + `omniprobe/scripts/<script>.py` | `configs/task/<task>.yaml` (+ `configs/<script>.yaml`) |
+| Tasks | `omniprobe/tasks/__init__.py` (registry) + `omniprobe/scripts/<script>.py` | `configs/task/<task>.yaml` |
 
-`omniprobe/run.py` validates the task/mode, builds a runtime context, and dispatches to the task. Backbone capabilities are described by *contracts* (`omniprobe/models/contracts.py`), which the runtime checks before a task loads a model.
+`omniprobe/run.py` validates the selected task config, builds a runtime context, and dispatches to the task. Backbone capabilities are described by *contracts* (`omniprobe/models/contracts.py`), which the runtime checks before a task loads a model.
 
 ---
 
@@ -84,7 +84,7 @@ class YourModel(torch.nn.Module):
         return outputs[0] if len(self.multilayers) == 1 else outputs
 ```
 
-**2. Contract** — register the model's capabilities in `_BACKBONE_CONTRACTS` (`omniprobe/models/contracts.py`), keyed by the `_target_` string. The positional fields are `(target, supported_outputs, default_global_output, supports_multilayer, supports_layer_selection, input_normalization)`:
+**2. Contract** — register the model's capabilities in `_BACKBONE_CONTRACTS` (`omniprobe/models/contracts.py`), keyed by the `_target_` string. The positional fields are `(target, supported_outputs, default_global_output, supports_multilayer, supports_layer_selection)`:
 
 ```python
 "omniprobe.models.your_model.YourModel": BackboneContract(
@@ -93,7 +93,6 @@ class YourModel(torch.nn.Module):
     "gap",                     # default global output (None -> first of cls/gap/map)
     True,                      # supports_multilayer
     True,                      # supports_layer_selection
-    "imagenet",                # input normalization ("imagenet" or "raw")
 ),
 ```
 
@@ -103,9 +102,12 @@ class YourModel(torch.nn.Module):
 
 ```yaml
 _target_: omniprobe.models.your_model.YourModel
+image_mean: imagenet
 output: dense
 layer: -1
 ```
+
+Use `image_mean: clip`, `perception`, or `raw` when the backbone expects that input convention. Dataset configs and legacy script payloads receive `${backbone.image_mean}`.
 
 Run it: `python -m omniprobe.run task=correspondence_soco backbone=your_model`. The config-glob test in `tests/test_backbone_contracts.py` automatically checks that every `configs/backbone/*.yaml` resolves to a contract.
 
@@ -124,41 +126,54 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 from omniprobe.datasets.builder import build_loader
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import (
+    append_jsonl,
+    artifact_dir,
+    build_result_entry,
+    resolve_output_dir,
+    resolve_results_path,
+)
 
 
 def run_task(cfg: DictConfig):
     device = cfg.device
+    output_dir = resolve_output_dir(cfg)
     model = instantiate(cfg.backbone, output="dense").to(device).eval()
     loader = build_loader(cfg.dataset, "test", batch_size=4)
     # ... iterate over loader, run model(images), build a metrics dict ...
-    entry = build_result_entry("your_task", "default", model, output_dir, cfg, metrics)
+    predictions_dir = artifact_dir(cfg, "predictions")
+    entry = build_result_entry("your_task", model, output_dir, cfg, metrics)
     append_jsonl(resolve_results_path(cfg, "your_task.jsonl"), entry)
 ```
 
-**2. Script config** — `configs/eval_your_task.yaml` (whatever the script reads: `dataset`, hyperparameters, …).
+**2. Task config** — `configs/task/your_task.yaml`. This is the public protocol layer for `python -m omniprobe.run`; put the deliberate task defaults here. If another protocol has meaningfully different defaults, add an explicit task config such as `configs/task/your_task_linear_probe.yaml` rather than hiding the differences in a shared group.
 
-**3. Task config** — `configs/task/your_task.yaml`:
+If a variant only toggles behavior inside the same protocol, prefer an explicit override instead of a new task config. For example, soft-argmax correspondence and SOCO cross-pair evaluation are run through their base task configs:
+
+```bash
+python -m omniprobe.run task=correspondence_spair backbone=dinov2_b14 \
+  task.soft_eval=true
+python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 \
+  task.pair_subdir=PairAnnotations/cross
+```
 
 ```yaml
 name: your_task
-mode: default
 dataset:
   path: ${oc.env:YOUR_TASK_ROOT,data/your_dataset}
 ```
 
-**4. Registry** — add an entry to `SCRIPT_TASKS` in `omniprobe/tasks/__init__.py`. For a single-mode task, the `_simple_dispatch` helper is enough:
+Script-backed task configs also declare the backend module:
 
-```python
-"your_task": {
-    "modes": ("default",),
-    "dispatch": _simple_dispatch("eval_your_task", "omniprobe.scripts.eval_your_task"),
-},
+```yaml
+runner:
+  module: omniprobe.scripts.eval_your_task
+  required_output: dense
 ```
 
-A dispatch function has signature `dispatch(cfg, mode_name, contract) -> (config_name, module_name, extra_overrides)` and should assert the features it needs, e.g. `contract.require_output("dense", "your_task", mode_name)`. For multi-mode tasks, write a custom dispatch that routes `mode_name` to different `config_name`/`module_name` (see `_correspondence_soco_dispatch`). `validate_task_mode` rejects unknown task names and modes up front.
+Use `required_output: global` for tasks that consume the backbone's default global output. Use `require_multilayer: true` for tasks that need multilayer features — the runtime then forwards `return_multilayer=true` to the backbone automatically. Add an explicit `extra_overrides:` block only for any other backbone/script overrides a task must force.
 
-`run_script_task` (`omniprobe/tasks/script_task.py`) loads `configs/<config_name>.yaml`, merges in the `task.*` and backbone overrides, then imports the module and calls its `run_task(cfg)`.
+`run_script_task` (`omniprobe/tasks/script_task.py`) flattens `cfg.task` into the legacy script config, excluding control/internal keys (`name`, `runner`), then applies backbone/device and runner overrides before importing the module and calling `run_task(cfg)`. Precedence is `selected task config < CLI/Python task overrides < runner overrides`.
 
 **Native tasks** (no script delegation) implement `run(cfg, context)` in their module and are registered in `_NATIVE_TASK_MODULES` (e.g. `classification_imagenet_knn`).
 

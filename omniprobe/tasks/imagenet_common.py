@@ -1,13 +1,9 @@
 from omniprobe.datasets.imagenet import ImageNetDataConfig, build_imagenet_dataloader
-from omniprobe.runtime import resolve_image_mean
 from omniprobe.utils.eval_helpers import resolve_mean_std
 
 
-def build_imagenet_loaders(task_cfg, contract):
-    image_mean = None
-    if "image_mean" in task_cfg:
-        image_mean = task_cfg.image_mean
-    mean, std = resolve_mean_std(resolve_image_mean(contract, image_mean))
+def build_imagenet_loaders(task_cfg, backbone_cfg):
+    mean, std = resolve_mean_std(backbone_cfg.image_mean)
     train_cfg = ImageNetDataConfig(
         root=task_cfg.data_root,
         split=task_cfg.train_split,

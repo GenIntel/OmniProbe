@@ -1,4 +1,5 @@
 _target_: omniprobe.models.metaclip.MetaCLIP
+image_mean: clip
 arch: "vits16"
 checkpoint: "metaclip/metaclip2_s16_224px_worldwide.pt"
 output: dense

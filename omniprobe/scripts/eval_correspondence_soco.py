@@ -19,7 +19,7 @@ from loguru import logger
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
 from omniprobe.datasets.soco import SOCODataset
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d, soft_argmax_2d
 
 
@@ -507,8 +507,9 @@ def run_task(cfg: DictConfig):
     results = {}
 
     # Open per-run prediction log file once.
-    pred_log_path = os.path.join(output_dir, "pred_outputs_soco.json")
-    pred_pkl_path = os.path.join(output_dir, "pred_outputs_soco.pkl")
+    pred_dir = artifact_dir(cfg, "predictions")
+    pred_log_path = pred_dir / "pred_outputs_soco.json"
+    pred_pkl_path = pred_dir / "pred_outputs_soco.pkl"
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
     pred_records = []
     with open(pred_log_path, "w") as pred_log_fh:
@@ -544,7 +545,7 @@ def run_task(cfg: DictConfig):
             results[class_name] = (recall_sem, recall_concept)
 
             if cfg.num_visualize > 0:
-                vis_dir = os.path.join(output_dir, "vis", class_name)
+                vis_dir = artifact_dir(cfg, "visualizations") / class_name
                 visualize_samples(
                     model,
                     dataset,
@@ -589,10 +590,8 @@ def run_task(cfg: DictConfig):
             # "|".join(classes),
         ]
     )
-    mode_name = "soft_argmax" if cfg.soft_eval else "nn"
     entry = build_result_entry(
         "soco",
-        mode_name,
         model,
         output_dir,
         cfg,

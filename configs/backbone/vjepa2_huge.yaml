@@ -1,4 +1,5 @@
 _target_: omniprobe.models.vjepa2.VJEPA2Backbone
+image_mean: imagenet
 model_type: vjepa2_vit_huge
 output: dense
 layer: -1

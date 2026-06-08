@@ -8,4 +8,4 @@ results_dir: results
 
 hydra:
   run:
-    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task.name}_${task.mode}_${hydra:runtime.choices.backbone}
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${task.name}_${hydra:runtime.choices.backbone}

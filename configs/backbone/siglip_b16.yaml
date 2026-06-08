@@ -1,4 +1,5 @@
 _target_: omniprobe.models.siglip.SigLIP
+image_mean: imagenet
 checkpoint: "vit_base_patch16_siglip_384"
 output: dense
 layer: -1

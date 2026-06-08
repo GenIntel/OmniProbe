@@ -26,7 +26,6 @@ def test_backbone_contract_from_cfg_metadata():
     contract = get_backbone_contract(cfg)
     assert contract.supported_outputs == ("dense", "gap")
     assert contract.resolve_global_output() == "gap"
-    assert contract.input_normalization == "imagenet"
 
 
 def test_single_and_multilayer_feat_dim_consistency():
@@ -62,6 +61,7 @@ def test_backbone_configs_have_contract_or_inline_metadata():
     cfg_dir = Path(__file__).resolve().parents[1] / "configs" / "backbone"
     for path in sorted(cfg_dir.glob("*.yaml")):
         cfg = OmegaConf.load(path)
+        assert "image_mean" in cfg, path.name
         contract = get_backbone_contract(cfg)
         assert len(contract.supported_outputs) > 0, path.name
 

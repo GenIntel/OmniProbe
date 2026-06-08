@@ -1,4 +1,5 @@
 _target_: omniprobe.models.croco.CroCoBackbone
+image_mean: imagenet
 checkpoint_path: ${oc.env:CROCO_CKPT,croco/CroCo_V2_ViTBase_BaseDecoder.pth}
 pos_embed_override: null
 return_multilayer: null

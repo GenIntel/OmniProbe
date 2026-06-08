@@ -29,9 +29,17 @@ def faiss_knn(query, target, k):
 
     num_elements, feat_dim = query.shape
     faiss = _get_faiss_module()
-    gpu_index = faiss.GpuIndexFlatL2(_get_faiss_resources(), feat_dim)
-    gpu_index.add(target)
-    dist, index = gpu_index.search(query, k)
+    if hasattr(faiss, "GpuIndexFlatL2"):
+        index_flat = faiss.GpuIndexFlatL2(_get_faiss_resources(), feat_dim)
+        index_flat.add(target)
+        dist, index = index_flat.search(query, k)
+        return dist, index
+
+    index_flat = faiss.IndexFlatL2(feat_dim)
+    index_flat.add(target.detach().cpu().numpy())
+    dist_np, index_np = index_flat.search(query.detach().cpu().numpy(), k)
+    dist = torch.from_numpy(dist_np).to(query.device)
+    index = torch.from_numpy(index_np).to(query.device)
     return dist, index
 
 

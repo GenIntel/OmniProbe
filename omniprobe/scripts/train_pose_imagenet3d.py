@@ -12,7 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from omniprobe.datasets.builder import build_loader
 from omniprobe.models.contracts import get_backbone_contract, instantiate_backbone_for_output
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.pose import bin_to_continuous, batch_pose_error
 
 
@@ -213,7 +213,7 @@ def run_task(cfg: DictConfig) -> None:
         + ", ".join(f"{k}={v:.4f}" for k, v in metrics.items())
     )
 
-    ckpt_path = output_dir / "pose_probe_final.pth"
+    ckpt_path = artifact_dir(cfg, "checkpoints") / "pose_probe_final.pth"
     torch.save(
         {
             "probe": probe.state_dict(),
@@ -223,16 +223,16 @@ def run_task(cfg: DictConfig) -> None:
     )
 
     logger.info(f"Saving to {output_dir}")
-    with open(output_dir / "metrics_v2.json", "w") as fp:
+    with open(output_dir / "metrics.json", "w") as fp:
         json.dump(metrics, fp, indent=2)
 
+    task_name = str(cfg.get("task_name", "pose_imagenet3d"))
     entry = build_result_entry(
-        "imagenet3d_pose",
-        "default",
+        task_name,
         backbone,
         output_dir,
         cfg,
         metrics,
         dataset="ImageNet3D",
     )
-    append_jsonl(resolve_results_path(cfg, "pose_imagenet3d.jsonl"), entry)
+    append_jsonl(resolve_results_path(cfg, f"{task_name}.jsonl"), entry)

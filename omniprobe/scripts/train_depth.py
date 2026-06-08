@@ -1,7 +1,3 @@
-import os
-from datetime import datetime
-from pathlib import Path
-
 import torch
 import torch.multiprocessing as mp
 from hydra.utils import instantiate
@@ -10,13 +6,19 @@ from omegaconf import DictConfig, OmegaConf
 from torch.nn.functional import interpolate
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import LambdaLR
-from tqdm import tqdm
 
 from omniprobe.datasets.builder import build_loader
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import (
+    append_jsonl,
+    artifact_dir,
+    build_result_entry,
+    resolve_output_dir,
+    resolve_results_path,
+)
 from omniprobe.utils.losses import DepthLoss
 from omniprobe.utils.metrics import evaluate_depth, match_scale_and_shift
 from omniprobe.utils.optim import cosine_decay_linear_warmup
+from omniprobe.utils.progress import progress
 from omniprobe.utils.training import ddp_setup, ddp_cleanup, unwrap_model
 
 
@@ -42,7 +44,7 @@ def train(
 
         train_loss = 0.0
         steps_this_epoch = 0
-        pbar = tqdm(train_loader) if rank == 0 else train_loader
+        pbar = progress(train_loader, desc=f"Epoch {ep}") if rank == 0 else train_loader
         for i, batch in enumerate(pbar):
             images = batch["image"].to(device)
             target = batch["depth"].to(device)
@@ -123,7 +125,7 @@ def validate(
     metrics = None
     batches_processed = 0
     with torch.inference_mode():
-        pbar = tqdm(loader, desc="Evaluation") if verbose else loader
+        pbar = progress(loader, desc="Evaluation") if verbose else loader
         for batch in pbar:
             images = batch["image"].to(device)
             target = batch["depth"].to(device)
@@ -176,9 +178,7 @@ def train_model(rank, world_size, cfg):
         cfg.probe, feat_dim=model.feat_dim, max_depth=trainval_loader.dataset.max_depth
     )
 
-    # setup experiment name
     # === job info
-    timestamp = datetime.now().strftime("%d%m%Y-%H%M")
     train_dset = trainval_loader.dataset.name
     test_dset = test_loader.dataset.name
     model_info = [
@@ -199,17 +199,10 @@ def train_model(rank, world_size, cfg):
         f"{test_dset:10s}",
     ]
 
-    # define exp_name
-    exp_name = "_".join([timestamp] + model_info + probe_info + train_info)
-    exp_name = f"{exp_name}_{cfg.note}" if cfg.note != "" else exp_name
-    exp_name = exp_name.replace(" ", "")  # remove spaces
+    output_dir = resolve_output_dir(cfg)
 
     # ===== SETUP LOGGING =====
     if rank == 0:
-        # exp_path = Path(__file__).parent / f"{cfg.results_dir}/{exp_name}"
-        exp_path = Path(__file__).parent / f"results/depth_exps/{exp_name}"
-        exp_path.mkdir(parents=True, exist_ok=True)
-        logger.add(exp_path / "training.log")
         logger.info(f"Config: \n {OmegaConf.to_yaml(cfg)}")
 
     # move to cuda
@@ -310,9 +303,8 @@ def train_model(rank, world_size, cfg):
 
         entry = build_result_entry(
             "depth",
-            "default",
             model,
-            exp_path,
+            output_dir,
             cfg,
             {
                 **{
@@ -334,7 +326,7 @@ def train_model(rank, world_size, cfg):
         )
 
         # save final model
-        ckpt_path = exp_path / "ckpt.pth"
+        ckpt_path = artifact_dir(cfg, "checkpoints") / "ckpt.pth"
         model_state = unwrap_model(model).state_dict()
         probe_state = unwrap_model(probe).state_dict()
         checkpoint = {

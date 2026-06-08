@@ -10,12 +10,12 @@ from einops import einsum
 from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig
-from tqdm import tqdm
 
 from omniprobe.datasets.ap10k import AP10KDataset, get_ap10k_categories
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d
 from omniprobe.utils.paths import cfg_or_env_path
+from omniprobe.utils.progress import progress
 
 from hydra.core.hydra_config import HydraConfig
 import os
@@ -168,7 +168,11 @@ def evaluate_dataset(
     subset_name=None,
     record_list=None,
 ):
-    iterator = tqdm(range(len(dataset)), ncols=60) if verbose else range(len(dataset))
+    iterator = (
+        progress(range(len(dataset)), desc="AP-10K evaluation")
+        if verbose
+        else range(len(dataset))
+    )
     errors_all = []
     src_all = []
     tgt_all = []
@@ -223,8 +227,8 @@ def evaluate_dataset(
 
 def run_task(cfg: DictConfig):
     output_dir = HydraConfig.get().run.dir
-    print(f'Output dir: {output_dir}')
-    vis_dir = os.path.join(output_dir, "vis")
+    logger.info(f"Output dir: {output_dir}")
+    vis_dir = artifact_dir(cfg, "visualizations")
     os.makedirs(vis_dir, exist_ok=True)
     
     data_root = cfg_or_env_path(cfg, "data_root", "AP10K_ROOT", "AP-10K dataset root")
@@ -252,8 +256,9 @@ def run_task(cfg: DictConfig):
     logger.info(f"Evaluating on {len(classes)} classes with eval_subset={eval_subset}")
     logger.info(f"Modified split: {modified_split}")
 
-    pred_log_path = os.path.join(output_dir, "pred_outputs_ap10k_correspondence.json")
-    pred_pkl_path = os.path.join(output_dir, "pred_outputs_ap10k_correspondence.pkl")
+    pred_dir = artifact_dir(cfg, "predictions")
+    pred_log_path = pred_dir / "pred_outputs_ap10k_correspondence.json"
+    pred_pkl_path = pred_dir / "pred_outputs_ap10k_correspondence.pkl"
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
 
     class_acc = {}
@@ -307,7 +312,6 @@ def run_task(cfg: DictConfig):
 
     entry = build_result_entry(
         "ap10k",
-        "default",
         model,
         output_dir,
         cfg,

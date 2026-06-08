@@ -4,20 +4,21 @@ import hydra
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from omniprobe.runtime import build_runtime_context
-from omniprobe.tasks import load_task_module, validate_task_mode
+from omniprobe.runtime import (
+    build_runtime_context,
+    configure_run_logging,
+)
+from omniprobe.tasks import load_task_module, validate_task
 
 
 def _print_tasks():
     from omniprobe.tasks import SCRIPT_TASKS, _NATIVE_TASK_MODULES
 
     print("Available tasks:\n")
-    for name in sorted([*SCRIPT_TASKS, *_NATIVE_TASK_MODULES]):
-        if name in SCRIPT_TASKS:
-            modes = ", ".join(SCRIPT_TASKS[name]["modes"])
-            print(f"  {name:<30s} modes: {modes}")
-        else:
-            print(f"  {name:<30s} (native)")
+    for name in sorted(SCRIPT_TASKS):
+        print(f"  {name:<38s} {SCRIPT_TASKS[name]['runner'].module}")
+    for name in sorted(_NATIVE_TASK_MODULES):
+        print(f"  {name:<38s} (native)")
     print()
 
 
@@ -32,11 +33,12 @@ def _print_backbones():
 
 @hydra.main(config_path="../configs", config_name="run", version_base=None)
 def main(cfg: DictConfig):
-    logger.info(f"Config:\n{OmegaConf.to_yaml(cfg)}")
-    validate_task_mode(cfg)
     context = build_runtime_context(cfg)
-    task_module = load_task_module(str(cfg.task.name))
-    return task_module.run(cfg, context)
+    with configure_run_logging(context.output_dir):
+        logger.info(f"Config:\n{OmegaConf.to_yaml(cfg)}")
+        validate_task(cfg)
+        task_module = load_task_module(str(cfg.task.name))
+        return task_module.run(cfg, context)
 
 
 def main_cli():

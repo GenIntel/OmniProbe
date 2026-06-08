@@ -1,4 +1,5 @@
 _target_: omniprobe.models.pixio.PIXIO
+image_mean: imagenet
 arch: "vitl16"
 output: dense
 layer: -1

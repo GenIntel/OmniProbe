@@ -1,4 +1,5 @@
 _target_: omniprobe.models.convnext.ConvNext
+image_mean: imagenet
 arch: "convnext_base"
 checkpoint: "in22k"
 output: dense

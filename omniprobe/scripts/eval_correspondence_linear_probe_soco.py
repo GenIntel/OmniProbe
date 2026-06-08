@@ -23,12 +23,12 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig, ListConfig, OmegaConf
-from tqdm import tqdm
 
 from omniprobe.datasets.soco import SOCODataset
 from omniprobe.utils.correspondence import argmax_2d
 from omniprobe.models.correspondence_probe import build_correspondence_probe
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
+from omniprobe.utils.progress import progress
 
 
 # ========== Seed & Utilities ==========
@@ -241,7 +241,11 @@ def evaluate_dataset_with_probe(
     if probe is not None:
         probe.eval()
     
-    iterator = tqdm(range(len(dataset)), ncols=60) if verbose else range(len(dataset))
+    iterator = (
+        progress(range(len(dataset)), desc="SOCO linear-probe evaluation")
+        if verbose
+        else range(len(dataset))
+    )
     semantic_all = []
     concept_all = []
 
@@ -355,7 +359,7 @@ def train_probe_epoch(model, probe, train_loader, optimizer, cfg, epoch, image_s
     
     loss_meter = AverageMeter()
     
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100)
+    pbar = progress(train_loader, desc=f"Epoch {epoch}")
     
     num_batches_with_loss = 0
     num_batches_skipped = 0
@@ -588,7 +592,7 @@ def run_task(cfg: DictConfig):
             logger.info(f"Loaded best probe with avg recall: {best_recall:.2f}")
         
         # Save trained probe
-        probe_save_path = os.path.join(output_dir, "trained_probe.pth")
+        probe_save_path = artifact_dir(cfg, "checkpoints") / "trained_probe.pth"
         torch.save(probe.state_dict(), probe_save_path)
         logger.info(f"Saved trained probe to {probe_save_path}")
 
@@ -597,8 +601,9 @@ def run_task(cfg: DictConfig):
     logger.info("Final evaluation on test split (per class)...")
     logger.info("=" * 50)
     
-    pred_log_path = os.path.join(output_dir, "pred_outputs_soco_linear_probe.json")
-    pred_pkl_path = os.path.join(output_dir, "pred_outputs_soco_linear_probe.pkl")
+    pred_dir = artifact_dir(cfg, "predictions")
+    pred_log_path = pred_dir / "pred_outputs_soco_linear_probe.json"
+    pred_pkl_path = pred_dir / "pred_outputs_soco_linear_probe.pkl"
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
 
     results = {}
@@ -661,7 +666,6 @@ def run_task(cfg: DictConfig):
     )
     entry = build_result_entry(
         "soco",
-        "linear_probe",
         model,
         output_dir,
         cfg,

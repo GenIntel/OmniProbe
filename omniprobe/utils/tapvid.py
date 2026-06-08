@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from loguru import logger
 
 
 def compute_cost_volume(tokens: torch.Tensor, query_tokens: torch.Tensor) -> torch.Tensor:
@@ -131,12 +132,12 @@ class TapVidEvaluator:
         def mean(values):
             return sum(values) / max(len(values), 1)
 
-        print(f"Mean delta_avg: {mean(self.delta_avg):.2f}")
-        print(f"Mean delta_1:   {mean(self.delta_1):.2f}")
-        print(f"Mean delta_2:   {mean(self.delta_2):.2f}")
-        print(f"Mean delta_4:   {mean(self.delta_4):.2f}")
-        print(f"Mean delta_8:   {mean(self.delta_8):.2f}")
-        print(f"Mean delta_16:  {mean(self.delta_16):.2f}")
-        print(f"Mean occ acc:   {mean(self.occlusion):.2f}")
+        logger.info(f"Mean delta_avg: {mean(self.delta_avg):.2f}")
+        logger.info(f"Mean delta_1:   {mean(self.delta_1):.2f}")
+        logger.info(f"Mean delta_2:   {mean(self.delta_2):.2f}")
+        logger.info(f"Mean delta_4:   {mean(self.delta_4):.2f}")
+        logger.info(f"Mean delta_8:   {mean(self.delta_8):.2f}")
+        logger.info(f"Mean delta_16:  {mean(self.delta_16):.2f}")
+        logger.info(f"Mean occ acc:   {mean(self.occlusion):.2f}")
         if not self.zero_shot:
-            print(f"Mean Jaccard:   {mean(self.jaccard):.2f}")
+            logger.info(f"Mean Jaccard:   {mean(self.jaccard):.2f}")

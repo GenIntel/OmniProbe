@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from loguru import logger
 from PIL import Image
 from torchvision import transforms as transforms
 
@@ -32,8 +33,7 @@ class ScanNetPairsDataset(torch.utils.data.Dataset):
         # parse files for data
         self.instances = self.get_instances(self.root)
 
-        # Print out dataset stats
-        print(f"{self.name} | {len(self.instances)} pairs")
+        logger.info(f"{self.name} | {len(self.instances)} pairs")
 
     def get_dep(self, path):
         with open(path, "rb") as f:

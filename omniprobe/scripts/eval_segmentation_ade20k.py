@@ -2,8 +2,6 @@
 Evaluate a saved ADE20K linear segmentation checkpoint.
 """
 
-import os
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -14,13 +12,19 @@ from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
-from tqdm import tqdm
 
 from omniprobe.datasets.ade20k import ADE20KDataConfig, build_ade20k_dataloaders
 from omniprobe.datasets.coco import create_pascal_label_colormap
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import (
+    append_jsonl,
+    artifact_dir,
+    build_result_entry,
+    resolve_output_dir,
+    resolve_results_path,
+)
 from omniprobe.utils.eval_helpers import resolve_mean_std
 from omniprobe.utils.metrics import confusion_matrix, compute_miou
+from omniprobe.utils.progress import progress
 
 
 def _dense_feature(feats, expected_dim: int):
@@ -101,7 +105,7 @@ def save_visualizations(
                     ],
                     axis=1,
                 )
-                Image.fromarray(panel).save(save_dir / f"eval_sample_{saved:02d}.png")
+                Image.fromarray(panel).save(save_dir / f"eval_sample_{saved:02d}.jpg")
                 saved += 1
 
 
@@ -132,6 +136,10 @@ def run_task(cfg: DictConfig) -> None:
         feat_dim = feat_dim[-1]
 
     head = LinearSegmentationHead(feat_dim, dataset_cfg.num_classes).to(device)
+    if cfg.checkpoint_path is None:
+        raise ValueError(
+            "segmentation_ade20k_eval requires task.checkpoint_path pointing to a trained checkpoint."
+        )
     checkpoint_path = Path(cfg.checkpoint_path)
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
@@ -144,7 +152,7 @@ def run_task(cfg: DictConfig) -> None:
         dtype=torch.float32,
     )
     with torch.no_grad():
-        for batch in tqdm(val_loader, desc="Evaluating", ncols=80):
+        for batch in progress(val_loader, desc="ADE20K evaluation"):
             images = batch["image"].to(device)
             masks = batch["mask"].to(device)
             feats = _dense_feature(model(images), expected_dim=feat_dim)
@@ -172,7 +180,11 @@ def run_task(cfg: DictConfig) -> None:
     logger.info(f"Evaluation complete | mIoU: {miou:.4f}")
 
     if cfg.visualize:
-        viz_dir = Path(cfg.visualization_dir)
+        viz_dir = (
+            Path(cfg.visualization_dir)
+            if cfg.visualization_dir is not None
+            else artifact_dir(cfg, "visualizations")
+        )
         save_visualizations(
             model=model,
             head=head,
@@ -188,9 +200,8 @@ def run_task(cfg: DictConfig) -> None:
     results_path = resolve_results_path(cfg, "segmentation_ade20k_eval.jsonl")
     entry = build_result_entry(
         "ade20k",
-        "eval",
         model,
-        Path(os.getcwd()),
+        resolve_output_dir(cfg),
         cfg,
         {"mIoU": miou},
         dataset="ADE20K",

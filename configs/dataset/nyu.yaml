@@ -1,6 +1,6 @@
 _target_: omniprobe.datasets.nyu.NYU
 train_path: ${oc.env:NYU_ROOT,data}/nyu_geonet
 test_path: ${oc.env:NYU_ROOT,data}/nyuv2/nyuv2_snorm_all.pkl
-image_mean: ${oc.select:backbone.image_mean,imagenet}
+image_mean: ${backbone.image_mean}
 augment_train: True
 center_crop: True

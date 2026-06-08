@@ -1,4 +1,5 @@
 _target_: omniprobe.models.mae.MAE
+image_mean: imagenet
 checkpoint: "facebook/vit-mae-base"
 output: dense
 layer: -1

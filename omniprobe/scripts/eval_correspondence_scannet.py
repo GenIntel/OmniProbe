@@ -5,9 +5,9 @@ import torch
 import torch.nn.functional as nn_F
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
+from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 from omniprobe.datasets.scannet_pairs import ScanNetPairsDataset
 from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
@@ -16,11 +16,12 @@ from omniprobe.utils.correspondence import (
     estimate_correspondence_depth,
     project_3dto2d,
 )
+from omniprobe.utils.progress import progress
 from omniprobe.utils.transformations import so3_rotation_angle, transform_points_Rt
 
 
 def run_task(cfg: DictConfig):
-    print(f"Config: \n {OmegaConf.to_yaml(cfg)}")
+    logger.info(f"Config:\n{OmegaConf.to_yaml(cfg)}")
     device = torch.device(cfg.device) if "device" in cfg else torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )
@@ -39,7 +40,7 @@ def run_task(cfg: DictConfig):
     # extract features
     err_2d = []
     R_gt = []
-    for i in tqdm(range(len(dataset))):
+    for i in progress(range(len(dataset)), desc="ScanNet correspondence evaluation"):
         instance = dataset.__getitem__(i)
         rgbs = torch.stack((instance["rgb_0"], instance["rgb_1"]), dim=0)
         deps = torch.stack((instance["depth_0"], instance["depth_1"]), dim=0)
@@ -76,7 +77,7 @@ def run_task(cfg: DictConfig):
     px_thresh = [5, 10, 20]
     for _th in px_thresh:
         recall_i = 100 * (err_2d < _th).float().mean()
-        print(f"Recall at {_th:>2d} pixels:  {recall_i:.2f}")
+        logger.info(f"Recall at {_th:>2d} pixels:  {recall_i:.2f}")
         results.append(f"{recall_i:5.02f}")
 
     # compute rel_ang
@@ -93,7 +94,6 @@ def run_task(cfg: DictConfig):
     output_dir = str(HydraConfig.get().run.dir)
     entry = build_result_entry(
         "scannet",
-        "default",
         model,
         output_dir,
         cfg,

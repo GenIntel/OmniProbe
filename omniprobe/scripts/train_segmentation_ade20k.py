@@ -6,8 +6,6 @@ This mirrors the NeCo linear finetuning recipe (RandomResizedCrop, SGD + StepLR,
 backbone/config infrastructure.
 """
 
-import os
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -18,13 +16,19 @@ from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
-from tqdm import tqdm
 
 from omniprobe.datasets.ade20k import ADE20KDataConfig, build_ade20k_dataloaders
 from omniprobe.datasets.coco import create_pascal_label_colormap
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import (
+    append_jsonl,
+    artifact_dir,
+    build_result_entry,
+    resolve_output_dir,
+    resolve_results_path,
+)
 from omniprobe.utils.eval_helpers import resolve_mean_std
 from omniprobe.utils.metrics import confusion_matrix, compute_miou
+from omniprobe.utils.progress import progress
 
 
 def _dense_feature(feats, expected_dim: int):
@@ -120,8 +124,8 @@ def save_visualizations(
                     ],
                     axis=1,
                 )
-                out_path = save_dir / f"sample_{saved:02d}.png"
-                Image.fromarray(panel).save(out_path)
+                out_path = save_dir / f"sample_{saved:02d}.jpg"
+                Image.fromarray(panel).save(out_path, quality=95)
                 saved += 1
 
 
@@ -160,8 +164,8 @@ def train(cfg: DictConfig) -> None:
     )
 
     # Setup checkpointing
-    run_dir = Path(os.getcwd())
-    ckpt_dir = Path(cfg.checkpoint.dir) if cfg.checkpoint.dir else run_dir / "checkpoints"
+    run_dir = resolve_output_dir(cfg)
+    ckpt_dir = Path(cfg.checkpoint.dir) if cfg.checkpoint.dir else artifact_dir(cfg, "checkpoints")
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     last_ckpt = ckpt_dir / "last.ckpt"
     best_ckpt = ckpt_dir / "best.ckpt"
@@ -192,7 +196,10 @@ def train(cfg: DictConfig) -> None:
     for epoch in range(start_epoch, cfg.optimizer.max_epochs):
         head.train()
         epoch_loss = 0.0
-        loader = tqdm(train_loader, desc=f"Epoch {epoch+1}/{cfg.optimizer.max_epochs}", ncols=100)
+        loader = progress(
+            train_loader,
+            desc=f"Epoch {epoch+1}/{cfg.optimizer.max_epochs}",
+        )
         for batch in loader:
             images = batch["image"].to(device, non_blocking=True)
             masks = batch["mask"].to(device, non_blocking=True)
@@ -292,7 +299,7 @@ def train(cfg: DictConfig) -> None:
         torch.save(checkpoint_payload, last_ckpt)
         if improved:
             torch.save(checkpoint_payload, best_ckpt)
-            viz_dir = ckpt_dir / "visualizations"
+            viz_dir = artifact_dir(cfg, "visualizations")
             save_visualizations(
                 model=model,
                 head=head,
@@ -306,7 +313,6 @@ def train(cfg: DictConfig) -> None:
 
     entry = build_result_entry(
         "ade20k",
-        "train",
         model,
         run_dir,
         cfg,

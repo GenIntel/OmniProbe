@@ -1,2 +1,17 @@
 name: correspondence_geometric_soco
-mode: default
+random_seed: 8
+data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
+pair_subdir: PairAnnotations/intra
+image_size: 800
+num_patches: 60
+fixed_patched_size: false
+use_bbox: false
+classes: all
+max_pairs: null
+thresh: 0.10
+mask_feats: false
+multilayer: false
+only_multi_candidate_eval: false
+runner:
+  module: omniprobe.scripts.eval_correspondence_geometric_soco
+  required_output: dense

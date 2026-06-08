@@ -1,4 +1,5 @@
 _target_: omniprobe.models.dino.DINO
+image_mean: imagenet
 dino_name: dino
 model_name: vitb16
 output: dense

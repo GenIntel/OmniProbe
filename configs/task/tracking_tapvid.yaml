@@ -1,11 +1,14 @@
+defaults:
+  - /dataset: tapvid
+  - _self_
+
 name: tracking_tapvid
-mode: default
 random_seed: 8
-image_mean: ${oc.select:backbone.image_mean,imagenet}
 multilayer: false
 feature:
   input_size: [448, 448]
   frame_chunk: 32
 dataloader_workers: 2
-dataset:
-  tapvid_root: ${oc.env:TAPVID_DAVIS_ROOT,data/tapvid_davis.pkl}
+runner:
+  module: omniprobe.scripts.eval_tracking_tapvid
+  required_output: dense

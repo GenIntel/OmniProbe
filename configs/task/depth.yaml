@@ -1,2 +1,18 @@
+defaults:
+  - /optimizer: ten_epoch
+  - /dataset: nyu
+  - /probe: depth_dpt
+  - _self_
+
 name: depth
-mode: default
+system:
+  random_seed: 8
+  num_gpus: 1
+  port: 12355
+  max_steps_per_epoch: 0
+  max_eval_batches: 0
+note: ""
+batch_size: 8
+runner:
+  module: omniprobe.scripts.train_depth
+  require_multilayer: true

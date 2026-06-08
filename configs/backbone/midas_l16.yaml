@@ -1,4 +1,5 @@
 _target_: omniprobe.models.midas_final.make_beit_backbone
+image_mean: imagenet
 output: dense
 layer: -1
 midas: True

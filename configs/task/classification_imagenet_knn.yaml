@@ -1,11 +1,9 @@
 name: classification_imagenet_knn
-mode: default
 data_root: ${oc.env:IMAGENET_ROOT,data/imagenet}
 train_split: ordered_train
 val_split: ordered
 image_size: 224
 batch_size: 256
 num_workers: 8
-image_mean: ${oc.select:backbone.image_mean,imagenet}
 knn_k: [20, 100, 200]
 temperature: 0.07

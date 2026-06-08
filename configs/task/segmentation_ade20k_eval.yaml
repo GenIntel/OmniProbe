@@ -1,0 +1,23 @@
+name: segmentation_ade20k_eval
+system:
+  random_seed: 400
+dataset:
+  root: ${oc.env:ADE20K_ROOT,data/ADEChallengeData2016}
+  crop_size: 448
+  image_mean: ${backbone.image_mean}
+  batch_size: 64
+  val_batch_size: 64
+  num_workers: 8
+  shuffle: false
+  val_iters: null
+  train_mask_size: 100
+  val_mask_size: 100
+  ignore_index: 0
+  num_classes: 151
+checkpoint_path: null
+visualize: false
+visualization_dir: null
+num_visualizations: 6
+runner:
+  module: omniprobe.scripts.eval_segmentation_ade20k
+  required_output: dense

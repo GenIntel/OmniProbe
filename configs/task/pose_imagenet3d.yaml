@@ -1,2 +1,27 @@
+defaults:
+  - /dataset: imagenet3d_pose
+  - /probe: pose_linear
+  - _self_
+
 name: pose_imagenet3d
-mode: default
+system:
+  random_seed: 0
+  output_root: results/imagenet3d_pose
+training:
+  epochs: 10
+  batch_size: 128
+  lr: 0.01
+  weight_decay: 0.0
+  momentum: 0.9
+  min_lr: 1.0e-5
+  log_freq: 20
+evaluation:
+  batch_size: 256
+  num_workers: 4
+multi_bin:
+  num_bins: 40
+  min_value: 0.0
+  max_value: 6.283185307179586
+runner:
+  module: omniprobe.scripts.train_pose_imagenet3d
+  required_output: global

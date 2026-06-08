@@ -82,13 +82,13 @@ The code for backbones that build on external repositories (CroCo, I-JEPA, Perce
 Every evaluation runs through one entrypoint:
 
 ```bash
-python -m omniprobe.run task=<task> backbone=<backbone> [task.mode=<mode>]
+python -m omniprobe.run task=<task_config> backbone=<backbone>
 ```
 
 A minimal SOCO correspondence run with a hub-loaded DINOv2 backbone (no checkpoint files needed; you only need the SOCO dataset configured — see [Datasets & paths](#datasets--paths)):
 
 ```bash
-python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 task.mode=nn
+python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14
 ```
 
 The same call from Python:
@@ -99,7 +99,6 @@ import omniprobe
 result = omniprobe.evaluate(
     task="correspondence_soco",
     backbone="dinov2_b14",
-    mode="nn",
 )
 print(result)
 ```
@@ -164,15 +163,17 @@ omniprobe --list-backbones
 # First configure dataset roots and (optionally) caches — see "Datasets & paths".
 
 # Correspondence
-python -m omniprobe.run task=correspondence_spair backbone=dino_b16 task.mode=nn
-python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 task.mode=soft_argmax
+python -m omniprobe.run task=correspondence_spair backbone=dino_b16
+python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 task.soft_eval=true
+python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 \
+  task.pair_subdir=PairAnnotations/cross
 python -m omniprobe.run task=correspondence_navi backbone=dino_b16
 python -m omniprobe.run task=tracking_tapvid backbone=dinov2_b14
 
 # Dense probes / segmentation
 python -m omniprobe.run task=depth backbone=dino_b16
 python -m omniprobe.run task=snorm backbone=dino_b16
-python -m omniprobe.run task=segmentation_ade20k backbone=dinov2_b14 task.mode=train
+python -m omniprobe.run task=segmentation_ade20k backbone=dinov2_b14
 
 # ImageNet classification
 python -m omniprobe.run task=classification_imagenet_knn    backbone=dinov2_b14 task.data_root=/path/to/imagenet
@@ -183,11 +184,10 @@ python -m omniprobe.run task=classification_imagenet_linear backbone=dinov2_b14 
 
 ```python
 omniprobe.evaluate(
-    task,                 # task name, e.g. "correspondence_spair"
+    task,                 # task config name, e.g. "correspondence_spair"
     backbone,             # backbone config name, e.g. "dinov2_b14"
-    mode="default",       # task mode (see --list-tasks)
     device="auto",        # "cuda" | "cpu" | "auto"
-    **task_overrides,     # forwarded onto cfg.task, e.g. data_root=...
+    **task_overrides,     # forwarded onto cfg.task, e.g. data_root=... or soft_eval=True
 )
 ```
 
@@ -198,25 +198,32 @@ print(omniprobe.available_backbones())   # all backbone config names
 print(omniprobe.available_tasks())       # all task names
 
 result = omniprobe.evaluate(
-    task="correspondence_soco",
+    task="correspondence_soco_linear_probe",
     backbone="dinov2_b14",
-    mode="linear_probe",
     data_root="/path/to/SOCOv1",
 )
 ```
 
 ### Configs
 
-Configuration lives in three Hydra layers:
+Configuration lives in two main Hydra layers:
 
 1. **Runtime** — [`configs/run.yaml`](./configs/run.yaml): default `task`, `backbone`, and runtime-only settings such as `device`.
-2. **Flat task defaults** — [`configs/task/`](./configs/task): one file per task (e.g. `correspondence_spair.yaml`, `depth.yaml`). The best place to change the defaults users see when running `python -m omniprobe.run`.
-3. **Canonical script configs** — [`configs/`](./configs): the per-script Hydra config trees (e.g. `eval_correspondence_spair.yaml`, `train_depth.yaml`) that script-backed tasks compose and then override.
+2. **Backbone configs** — [`configs/backbone/`](./configs/backbone): model constructor settings plus the explicit input normalization preset (`image_mean`, e.g. `imagenet`, `clip`, `perception`, or `raw`).
+3. **Task configs** — [`configs/task/`](./configs/task): explicit public defaults for `python -m omniprobe.run`. Distinct protocols get distinct task config names, e.g. `correspondence_soco.yaml` and `correspondence_soco_linear_probe.yaml`. Script-backed tasks also declare their backend module in a small `runner:` block.
+
+Precedence for script-backed tasks is:
+
+```text
+selected task config < CLI/Python task overrides < runner overrides
+```
 
 Practical rule:
 
-- Change `configs/task/<task>.yaml` for flat-runtime defaults.
-- Change `configs/<script_config>.yaml` for a script's internal config tree.
+- Change `configs/task/<task_config>.yaml` for user-facing task protocol defaults.
+- Change `configs/backbone/<backbone>.yaml` for model-specific input normalization. Runtime plumbing forwards `${backbone.image_mean}` to datasets and legacy scripts.
+- Per-run logs and artifacts are written to `outputs/<date>/<run>/`. Aggregate JSONL summaries stay in `results/`.
+- Each task config writes to its own `results/<task>.jsonl` (e.g. `correspondence_soco.jsonl` vs `correspondence_soco_linear_probe.jsonl`), so distinct protocols are separated by file rather than by a record field. In-protocol toggles such as `task.soft_eval=true` stay recoverable from the per-record embedded `config`.
 - Use Hydra CLI overrides for one-off runs:
 
 ```bash
@@ -224,9 +231,9 @@ Practical rule:
 python -m omniprobe.run task=correspondence_spair backbone=dinov2_b14 \
   task.data_root=/path/to/SPair-71k
 
-# Change task mode and training settings
-python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 \
-  task.mode=linear_probe task.train.epochs=20 task.train.lr=0.0005
+# Change linear-probe training settings
+python -m omniprobe.run task=correspondence_soco_linear_probe backbone=dinov2_b14 \
+  task.train.epochs=20 task.train.lr=0.0005
 ```
 
 Under the hood, most tasks delegate to evaluation scripts in `omniprobe/scripts/` (via their `run_task(cfg)` function); `classification_imagenet_knn` and `classification_imagenet_linear` are implemented natively in `omniprobe/tasks/`. The runtime entrypoint is [`omniprobe/run.py`](./omniprobe/run.py) and the task registry lives in [`omniprobe/tasks/__init__.py`](./omniprobe/tasks/__init__.py).
@@ -238,7 +245,7 @@ Each task reads its dataset root from an environment variable, defaulting to `da
 
 ```bash
 export SOCO_ROOT=/path/to/SOCOv1   # optional; defaults to data/SOCOv1
-python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14 task.mode=nn
+python -m omniprobe.run task=correspondence_soco backbone=dinov2_b14
 ```
 
 Downloaded checkpoints default to `checkpoints/` (override with `OMNIPROBE_PRETRAINED_MODELS`); backbone code that builds on external repositories is vendored under `omniprobe/models/vendor/`. See [docs/MODELS.md](./docs/MODELS.md) for the per-backbone checkpoint env vars (`CROCO_CKPT`, `VGGT_CKPT`, …).

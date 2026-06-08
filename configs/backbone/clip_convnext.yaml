@@ -1,4 +1,5 @@
 _target_: omniprobe.models.convnext.ConvNext
+image_mean: clip
 arch: "convnext_base_w"
 checkpoint: "laion2b_s13b_b82k"
 output: dense

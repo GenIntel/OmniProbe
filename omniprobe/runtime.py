@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -25,10 +26,41 @@ def resolve_device(device_name: str | None = None) -> torch.device:
 
 
 def build_runtime_context(cfg) -> RuntimeContext:
-    output_dir = Path(HydraConfig.get().runtime.output_dir)
+    output_dir = resolve_output_dir()
     output_dir.mkdir(parents=True, exist_ok=True)
     device_name = str(cfg.device) if "device" in cfg else "auto"
     return RuntimeContext(cfg, resolve_device(device_name), output_dir)
+
+
+def resolve_output_dir(cfg=None) -> Path:
+    if cfg is not None and "output_dir" in cfg:
+        return Path(str(cfg.output_dir))
+    try:
+        return Path(HydraConfig.get().runtime.output_dir)
+    except ValueError:
+        return Path.cwd()
+
+
+def artifact_dir(cfg_or_context=None, name: str | None = None) -> Path:
+    if isinstance(cfg_or_context, RuntimeContext):
+        base = cfg_or_context.output_dir
+    else:
+        base = resolve_output_dir(cfg_or_context)
+    path = base / name if name else base
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+@contextmanager
+def configure_run_logging(output_dir: Path):
+    """Write application Loguru records into the run directory."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    sink_id = logger.add(output_dir / "run.log", enqueue=False)
+    try:
+        yield
+    finally:
+        logger.remove(sink_id)
 
 
 def resolve_results_path(cfg, default_filename: str) -> Path:
@@ -52,7 +84,6 @@ def config_to_string(cfg) -> str:
 
 def build_result_entry(
     task_name: str,
-    mode_name: str,
     model,
     output_dir,
     cfg,
@@ -62,7 +93,6 @@ def build_result_entry(
     entry = {
         "time": datetime.now().strftime("%d%m%Y-%H%M"),
         "task": task_name,
-        "mode": mode_name,
         "backbone": getattr(model, "checkpoint_name", None),
         "patch_size": getattr(model, "patch_size", None),
         "layer": str(getattr(model, "layer", "")),
@@ -91,16 +121,8 @@ def extract_backbone_features(model, images, normalize: bool = False, pool: str 
     return feats
 
 
-def resolve_image_mean(backbone_contract, cfg_image_mean):
-    if cfg_image_mean is not None:
-        return cfg_image_mean
-    if backbone_contract.input_normalization:
-        return backbone_contract.input_normalization
-    return "imagenet"
-
-
-def log_runtime_header(task_name: str, mode_name: str, context: RuntimeContext) -> None:
+def log_runtime_header(task_name: str, context: RuntimeContext) -> None:
     logger.info(
-        f"Running task='{task_name}' mode='{mode_name}' on device='{context.device}' "
+        f"Running task='{task_name}' on device='{context.device}' "
         f"output_dir='{context.output_dir}'"
     )

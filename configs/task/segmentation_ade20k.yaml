@@ -1,3 +1,36 @@
 name: segmentation_ade20k
-mode: train
-data_root: ${oc.env:ADE20K_ROOT,data/ADEChallengeData2016}
+system:
+  random_seed: 400
+  num_gpus: 1
+  port: 12355
+dataset:
+  root: ${oc.env:ADE20K_ROOT,data/ADEChallengeData2016}
+  crop_size: 448
+  image_mean: ${backbone.image_mean}
+  batch_size: 64
+  val_batch_size: 64
+  num_workers: 8
+  shuffle: true
+  val_iters: 512
+  train_mask_size: 100
+  val_mask_size: 100
+  ignore_index: 0
+  num_classes: 151
+optimizer:
+  lr: 0.01
+  momentum: 0.9
+  weight_decay: 0.0001
+  max_epochs: 30
+  drop_at: 20
+  decay_rate: 0.1
+  fast_dev_run: false
+logging:
+  results_file: results/ade20k_linear_results_v1.jsonl
+checkpoint:
+  dir: null
+  resume_path: null
+  resume: false
+use_bn_head: false
+runner:
+  module: omniprobe.scripts.train_segmentation_ade20k
+  required_output: dense

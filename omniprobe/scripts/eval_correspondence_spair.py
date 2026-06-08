@@ -10,12 +10,12 @@ from einops import einsum
 from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig
-from tqdm import tqdm
 
 from omniprobe.datasets.spair import CLASS_IDS, SPairDataset
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d, soft_argmax_2d
 from omniprobe.utils.paths import cfg_or_env_path
+from omniprobe.utils.progress import progress
 
 from hydra.core.hydra_config import HydraConfig
 import os
@@ -217,7 +217,11 @@ def evaluate_dataset(
     soft_eval_beta=0.02,
     soft_eval_window=7,
 ):
-    iterator = tqdm(range(len(dataset)), ncols=60) if verbose else range(len(dataset))
+    iterator = (
+        progress(range(len(dataset)), desc="SPair evaluation")
+        if verbose
+        else range(len(dataset))
+    )
     errors_all = []
     src_all = []
     tgt_all = []
@@ -278,8 +282,8 @@ def evaluate_dataset(
 
 def run_task(cfg: DictConfig):
     output_dir = HydraConfig.get().run.dir
-    print(f'Output dir: {output_dir}')
-    vis_dir = os.path.join(output_dir, "vis")
+    logger.info(f"Output dir: {output_dir}")
+    vis_dir = artifact_dir(cfg, "visualizations")
     os.makedirs(vis_dir, exist_ok=True)
     
     data_root = cfg_or_env_path(cfg, "data_root", "SPAIR_ROOT", "SPair-71k root")
@@ -300,8 +304,9 @@ def run_task(cfg: DictConfig):
         assert cfg.eval_class in CLASS_IDS
         classes = [cfg.eval_class]
 
-    pred_log_path = os.path.join(output_dir, "pred_outputs_spair_correspondence.json")
-    pred_pkl_path = os.path.join(output_dir, "pred_outputs_spair_correspondence.pkl")
+    pred_dir = artifact_dir(cfg, "predictions")
+    pred_log_path = pred_dir / "pred_outputs_spair_correspondence.json"
+    pred_pkl_path = pred_dir / "pred_outputs_spair_correspondence.pkl"
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
 
     vps = [None,] #0, 1, 2,  #If interested in multiple viewpoint differences, add them here
@@ -367,7 +372,6 @@ def run_task(cfg: DictConfig):
     # result summary
     entry = build_result_entry(
         "spair",
-        "soft_argmax" if cfg.soft_eval else "nn",
         model,
         output_dir,
         cfg,
@@ -375,7 +379,7 @@ def run_task(cfg: DictConfig):
         dataset="SPair-71k",
         split=str(cfg.split),
         eval_class=str(cfg.eval_class),
-        num_instances=int(cfg.num_instances),
+        num_instances=None if cfg.num_instances is None else int(cfg.num_instances),
     )
     append_jsonl(
         resolve_results_path(cfg, "correspondence_spair.jsonl"),

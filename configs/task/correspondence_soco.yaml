@@ -1,14 +1,10 @@
 name: correspondence_soco
-mode: nn
 random_seed: 8
 data_root: ${oc.env:SOCO_ROOT,data/SOCOv1}
 pair_subdir: PairAnnotations/intra
-train_pair_subdir: PairAnnotations/trainsplits/train
-test_pair_subdir: PairAnnotations/trainsplits/test
 image_size: 800
 num_patches: 60
 fixed_patched_size: false
-image_mean: ${oc.select:backbone.image_mean,imagenet}
 use_bbox: false
 classes: all
 max_pairs: null
@@ -20,18 +16,6 @@ soft_eval: false
 soft_eval_beta: 0.02
 soft_eval_window: 7
 reduction: pair
-eval_before_training: false
-probe:
-  type: linear
-  init_mode: identity
-  bias: true
-train:
-  enabled: true
-  epochs: 4
-  lr: 0.001
-  batch_size: 32
-  num_workers: 4
-  temperature: 0.07
-  weight_decay: 0.0
-  use_scheduler: true
-  eval_every: 1
+runner:
+  module: omniprobe.scripts.eval_correspondence_soco
+  required_output: dense

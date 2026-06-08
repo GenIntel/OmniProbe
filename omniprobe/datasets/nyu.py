@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import scipy
 import torch
+from loguru import logger
 
 from .utils import get_nyu_transforms
 
@@ -63,7 +64,7 @@ class NYU_test(torch.utils.data.Dataset):
         self.snorms = [data_dict["snorms"][_i] for _i in self.indices]
 
         num_instances = len(self.indices)
-        print(f"NYUv2 labeled test set: {num_instances} instances")
+        logger.info(f"NYUv2 labeled test set: {num_instances} instances")
 
     def __len__(self):
         return len(self.indices)
@@ -146,7 +147,7 @@ class NYU_geonet(torch.utils.data.Dataset):
         else:
             raise ValueError()
 
-        print(f"NYU-GeoNet {split}: {len(self.instances)} instances.")
+        logger.info(f"NYU-GeoNet {split}: {len(self.instances)} instances.")
 
     def __len__(self):
         return len(self.instances)

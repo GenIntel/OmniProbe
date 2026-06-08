@@ -114,19 +114,19 @@ def _knn_predict(train_feats, train_labels, val_feats, val_targets, k_list, temp
 
 
 def run(cfg, context):
-    log_runtime_header(TASK_NAME, "default", context)
+    log_runtime_header(TASK_NAME, context)
     contract = get_backbone_contract(cfg.backbone)
     output_name = contract.resolve_global_output()
     if "output" in cfg.task and cfg.task.output is not None:
         output_name = str(cfg.task.output)
-        contract.require_output(output_name, TASK_NAME, "default")
+        contract.require_output(output_name, TASK_NAME)
     model, contract = instantiate_backbone_for_output(
         cfg.backbone,
         output_name=output_name,
         return_multilayer=uses_multilayer_global_features(cfg.backbone),
         device=context.device,
     )
-    train_loader, val_loader = build_imagenet_loaders(cfg.task, contract)
+    train_loader, val_loader = build_imagenet_loaders(cfg.task, cfg.backbone)
     num_classes = len(train_loader.dataset.classes)
 
     train_feats, train_labels = _extract_features(model, train_loader, context.device, "train")
@@ -143,7 +143,6 @@ def run(cfg, context):
     log_path = resolve_results_path(cfg, "imagenet_knn.jsonl")
     entry = build_result_entry(
         TASK_NAME,
-        "default",
         model,
         context.output_dir,
         cfg,

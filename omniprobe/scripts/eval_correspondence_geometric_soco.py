@@ -328,7 +328,6 @@ def run_task(cfg: DictConfig):
 
     entry = build_result_entry(
         "geometric_soco",
-        "default",
         model,
         output_dir,
         cfg,

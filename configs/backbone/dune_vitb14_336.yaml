@@ -1,4 +1,5 @@
 _target_: omniprobe.models.dune.DUNE
+image_mean: imagenet
 arch: "vitb14_336"
 output: dense
 layer: -1

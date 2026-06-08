@@ -1,7 +1,3 @@
-import os
-from datetime import datetime
-from pathlib import Path
-
 import torch
 import torch.multiprocessing as mp
 import torch.nn.functional as F
@@ -10,13 +6,19 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import LambdaLR
-from tqdm import tqdm
 
 from omniprobe.datasets.builder import build_loader
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import (
+    append_jsonl,
+    artifact_dir,
+    build_result_entry,
+    resolve_output_dir,
+    resolve_results_path,
+)
 from omniprobe.utils.losses import angular_loss
 from omniprobe.utils.metrics import evaluate_surface_norm
 from omniprobe.utils.optim import cosine_decay_linear_warmup
+from omniprobe.utils.progress import progress
 from omniprobe.utils.training import ddp_setup, ddp_cleanup, unwrap_model
 
 
@@ -40,7 +42,7 @@ def train(
             train_loader.sampler.set_epoch(ep)
 
         train_loss = 0
-        pbar = tqdm(train_loader) if rank == 0 else train_loader
+        pbar = progress(train_loader, desc=f"Epoch {ep}") if rank == 0 else train_loader
         for i, batch in enumerate(pbar):
             if max_steps_per_epoch is not None and i >= max_steps_per_epoch:
                 break
@@ -99,7 +101,7 @@ def validate(model, probe, loader, device, verbose=True, aggregate=True, max_bat
     total_loss = 0.0
     metrics = None
     with torch.inference_mode():
-        pbar = tqdm(loader, desc="Evaluation") if verbose else loader
+        pbar = progress(loader, desc="Evaluation") if verbose else loader
         for idx, batch in enumerate(pbar):
             if max_batches is not None and idx >= max_batches:
                 break
@@ -147,9 +149,7 @@ def train_model(rank, world_size, cfg):
     model = instantiate(cfg.backbone)
     probe = instantiate(cfg.probe, feat_dim=model.feat_dim)
 
-    # setup experiment name
     # === job info
-    timestamp = datetime.now().strftime("%d%m%Y-%H%M")
     train_dset = trainval_loader.dataset.name
     test_dset = test_loader.dataset.name
     model_info = [
@@ -169,16 +169,10 @@ def train_model(rank, world_size, cfg):
         f"{train_dset:10s}",
         f"{test_dset:10s}",
     ]
-    # define exp_name
-    exp_name = "_".join([timestamp] + model_info + probe_info + train_info)
-    exp_name = f"{exp_name}_{cfg.note}" if cfg.note != "" else exp_name
-    exp_name = exp_name.replace(" ", "")  # remove spaces
+    output_dir = resolve_output_dir(cfg)
 
     # ===== SETUP LOGGING =====
     if rank == 0:
-        exp_path = Path(__file__).parent / f"results/snorm_exps/{exp_name}"
-        exp_path.mkdir(parents=True, exist_ok=True)
-        logger.add(exp_path / "training.log")
         logger.info(f"Config: \n {OmegaConf.to_yaml(cfg)}")
 
     # move to cuda
@@ -269,9 +263,8 @@ def train_model(rank, world_size, cfg):
 
         entry = build_result_entry(
             "snorm",
-            "default",
             model,
-            exp_path,
+            output_dir,
             cfg,
             serializable_metrics,
             probe=probe_info,
@@ -284,7 +277,7 @@ def train_model(rank, world_size, cfg):
         )
 
         # save final model
-        ckpt_path = exp_path / "ckpt.pth"
+        ckpt_path = artifact_dir(cfg, "checkpoints") / "ckpt.pth"
         checkpoint = {
             "cfg": cfg,
             "model": unwrap_model(model).state_dict(),

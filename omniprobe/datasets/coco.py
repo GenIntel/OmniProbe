@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
-from tqdm import tqdm
 import torch
 
 def bit_get(val, idx):
@@ -178,6 +177,5 @@ class CocoSegDataset(Dataset):
             "label": label,
             "mask": mask
         }
-
 
 

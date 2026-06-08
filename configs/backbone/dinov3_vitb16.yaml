@@ -1,4 +1,5 @@
 _target_: omniprobe.models.dinov3.DinoV3
+image_mean: imagenet
 arch: "vitb16"
 output: dense
 layer: -1

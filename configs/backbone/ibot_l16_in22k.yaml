@@ -1,4 +1,5 @@
 _target_: omniprobe.models.ibot.iBOT
+image_mean: imagenet
 model_type: large_in22k
 output: dense
 layer: -1

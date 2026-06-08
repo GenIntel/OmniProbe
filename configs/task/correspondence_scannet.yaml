@@ -1,8 +1,9 @@
 name: correspondence_scannet
-mode: default
 random_seed: 8
 scale_factor: 0.25
 num_corr: 1000
 multilayer: false
-image_mean: ${oc.select:backbone.image_mean,perception}
 data_root: ${oc.env:SCANNET_ROOT,data/scannet_test_1500}
+runner:
+  module: omniprobe.scripts.eval_correspondence_scannet
+  required_output: dense

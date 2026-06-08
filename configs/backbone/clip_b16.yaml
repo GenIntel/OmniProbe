@@ -1,4 +1,5 @@
 _target_: omniprobe.models.clip.CLIP
+image_mean: clip
 arch: "ViT-B-16"
 checkpoint: "openai"
 output: dense

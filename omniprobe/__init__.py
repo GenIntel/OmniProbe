@@ -18,16 +18,14 @@ def available_backbones() -> list[str]:
 def evaluate(
     task: str,
     backbone: str,
-    mode: str = "default",
     device: str = "auto",
     **task_overrides,
 ):
     """Run a task evaluation programmatically (without Hydra CLI).
 
     Args:
-        task: Task name (e.g. "spair", "depth").
+        task: Task config name (e.g. "correspondence_spair", "depth").
         backbone: Backbone config name (e.g. "dinov2_b14").
-        mode: Task mode (e.g. "nn", "train", "default").
         device: Device string ("cuda", "cpu", "auto").
         **task_overrides: Additional task-level config overrides.
 
@@ -49,14 +47,14 @@ def evaluate(
         GlobalHydra.instance().clear()
 
     with initialize_config_dir(config_dir=config_dir, version_base=None):
+        overrides = [
+            f"task={task}",
+            f"backbone={backbone}",
+            f"device={device}",
+        ]
         cfg = compose(
             config_name="run",
-            overrides=[
-                f"task={task}",
-                f"backbone={backbone}",
-                f"task.mode={mode}",
-                f"device={device}",
-            ],
+            overrides=overrides,
         )
 
     if task_overrides:

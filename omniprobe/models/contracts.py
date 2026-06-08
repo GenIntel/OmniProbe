@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 from hydra.utils import get_object, instantiate
 from omegaconf import OmegaConf
@@ -14,24 +14,22 @@ class BackboneContract:
         default_global_output: str | None,
         supports_multilayer: bool,
         supports_layer_selection: bool,
-        input_normalization: str,
     ) -> None:
         self.target = target
         self.supported_outputs = tuple(supported_outputs)
         self.default_global_output = default_global_output
         self.supports_multilayer = supports_multilayer
         self.supports_layer_selection = supports_layer_selection
-        self.input_normalization = input_normalization
 
     def supports_output(self, output_name: str) -> bool:
         return output_name in self.supported_outputs
 
-    def require_output(self, output_name: str, task_name: str, mode_name: str) -> None:
+    def require_output(self, output_name: str, task_name: str) -> None:
         if self.supports_output(output_name):
             return
         raise ValueError(
             f"Backbone '{self.target}' does not support output '{output_name}' "
-            f"required by task='{task_name}' mode='{mode_name}'. "
+            f"required by task='{task_name}'. "
             f"Supported outputs: {list(self.supported_outputs)}"
         )
 
@@ -54,7 +52,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "clip",
     ),
     "omniprobe.models.convnext.ConvNext": BackboneContract(
         "omniprobe.models.convnext.ConvNext",
@@ -62,7 +59,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.croco.CroCoBackbone": BackboneContract(
         "omniprobe.models.croco.CroCoBackbone",
@@ -70,7 +66,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.c_radio.CRADIOv3Backbone": BackboneContract(
         "omniprobe.models.c_radio.CRADIOv3Backbone",
@@ -78,7 +73,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         False,
-        "raw",
     ),
     "omniprobe.models.c_radio.CRADIOv4Backbone": BackboneContract(
         "omniprobe.models.c_radio.CRADIOv4Backbone",
@@ -86,7 +80,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         False,
-        "raw",
     ),
     "omniprobe.models.deit.DeIT": BackboneContract(
         "omniprobe.models.deit.DeIT",
@@ -94,7 +87,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.stablediffusion.DIFT": BackboneContract(
         "omniprobe.models.stablediffusion.DIFT",
@@ -102,7 +94,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.dino.DINO": BackboneContract(
         "omniprobe.models.dino.DINO",
@@ -110,7 +101,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.dino_diy_sc.DINO": BackboneContract(
         "omniprobe.models.dino_diy_sc.DINO",
@@ -118,7 +108,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.dino_reg.DINOreg": BackboneContract(
         "omniprobe.models.dino_reg.DINOreg",
@@ -126,7 +115,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.dinov3.DinoV3": BackboneContract(
         "omniprobe.models.dinov3.DinoV3",
@@ -134,7 +122,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.dune.DUNE": BackboneContract(
         "omniprobe.models.dune.DUNE",
@@ -142,7 +129,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.ibot.iBOT": BackboneContract(
         "omniprobe.models.ibot.iBOT",
@@ -150,7 +136,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.ijepa.IJEPA": BackboneContract(
         "omniprobe.models.ijepa.IJEPA",
@@ -158,7 +143,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.mae.MAE": BackboneContract(
         "omniprobe.models.mae.MAE",
@@ -166,7 +150,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.metaclip.MetaCLIP": BackboneContract(
         "omniprobe.models.metaclip.MetaCLIP",
@@ -174,7 +157,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "clip",
     ),
     "omniprobe.models.midas_final.make_beit_backbone": BackboneContract(
         "omniprobe.models.midas_final.make_beit_backbone",
@@ -182,7 +164,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.midas_final.MIDAS": BackboneContract(
         "omniprobe.models.midas_final.MIDAS",
@@ -190,7 +171,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.perception.PerceptionBackbone": BackboneContract(
         "omniprobe.models.perception.PerceptionBackbone",
@@ -198,7 +178,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "perception",
     ),
     "omniprobe.models.pixio.PIXIO": BackboneContract(
         "omniprobe.models.pixio.PIXIO",
@@ -206,7 +185,6 @@ _BACKBONE_CONTRACTS = {
         "cls",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.lvlm_visual.QwenVLVisualBackbone": BackboneContract(
         "omniprobe.models.lvlm_visual.QwenVLVisualBackbone",
@@ -214,7 +192,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         False,
         True,
-        "imagenet",
     ),
     "omniprobe.models.lvlm_visual.InternVLVisualBackbone": BackboneContract(
         "omniprobe.models.lvlm_visual.InternVLVisualBackbone",
@@ -222,7 +199,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         False,
         True,
-        "imagenet",
     ),
     "omniprobe.models.lvlm_visual.LlavaOneVisionVisualBackbone": BackboneContract(
         "omniprobe.models.lvlm_visual.LlavaOneVisionVisualBackbone",
@@ -230,7 +206,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         False,
         True,
-        "imagenet",
     ),
     "omniprobe.models.sam.SAM": BackboneContract(
         "omniprobe.models.sam.SAM",
@@ -238,7 +213,6 @@ _BACKBONE_CONTRACTS = {
         None,
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.siglip.SigLIP": BackboneContract(
         "omniprobe.models.siglip.SigLIP",
@@ -246,7 +220,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
     "omniprobe.models.vggt.VGGTBackbone": BackboneContract(
         "omniprobe.models.vggt.VGGTBackbone",
@@ -254,7 +227,6 @@ _BACKBONE_CONTRACTS = {
         None,
         True,
         True,
-        "raw",
     ),
     "omniprobe.models.vjepa2.VJEPA2Backbone": BackboneContract(
         "omniprobe.models.vjepa2.VJEPA2Backbone",
@@ -262,7 +234,6 @@ _BACKBONE_CONTRACTS = {
         "gap",
         True,
         True,
-        "imagenet",
     ),
 }
 
@@ -308,16 +279,12 @@ def get_backbone_contract(backbone_cfg, model=None) -> BackboneContract:
         supports_layer_selection = True
         if "supports_layer_selection" in backbone_cfg:
             supports_layer_selection = bool(backbone_cfg.supports_layer_selection)
-        input_normalization = "imagenet"
-        if "image_mean" in backbone_cfg:
-            input_normalization = str(backbone_cfg.image_mean)
         return BackboneContract(
             target,
             tuple(backbone_cfg.supported_outputs),
             default_global_output,
             supports_multilayer,
             supports_layer_selection,
-            input_normalization,
         )
 
     if model is not None and hasattr(model, "supported_outputs"):
@@ -331,16 +298,12 @@ def get_backbone_contract(backbone_cfg, model=None) -> BackboneContract:
         supports_layer_selection = True
         if hasattr(model, "supports_layer_selection"):
             supports_layer_selection = bool(model.supports_layer_selection)
-        input_normalization = "imagenet"
-        if hasattr(model, "image_mean"):
-            input_normalization = str(model.image_mean)
         return BackboneContract(
             target,
             supported_outputs,
             default_global_output,
             supports_multilayer,
             supports_layer_selection,
-            input_normalization,
         )
 
     if target in _BACKBONE_CONTRACTS:
@@ -353,9 +316,6 @@ def get_backbone_contract(backbone_cfg, model=None) -> BackboneContract:
         )
 
     supported_outputs = (str(model.output),)
-    input_normalization = "imagenet"
-    if hasattr(model, "image_mean"):
-        input_normalization = str(model.image_mean)
     supports_multilayer = hasattr(model, "multilayers")
     return BackboneContract(
         target,
@@ -363,7 +323,6 @@ def get_backbone_contract(backbone_cfg, model=None) -> BackboneContract:
         None,
         supports_multilayer,
         True,
-        input_normalization,
     )
 
 
@@ -375,21 +334,12 @@ def instantiate_backbone_for_output(
     layer: int = -1,
 ):
     contract = get_backbone_contract(backbone_cfg)
-    contract.require_output(output_name, "runtime", "instantiate_backbone")
+    contract.require_output(output_name, "runtime")
     if return_multilayer and not contract.supports_multilayer:
         raise ValueError(
             f"Backbone '{contract.target}' does not support multilayer outputs."
         )
-    instantiate_cfg = OmegaConf.create(OmegaConf.to_container(backbone_cfg, resolve=True))
-    for key in (
-        "image_mean",
-        "supported_outputs",
-        "default_global_output",
-        "supports_multilayer",
-        "supports_layer_selection",
-    ):
-        if key in instantiate_cfg:
-            del instantiate_cfg[key]
+    instantiate_cfg = prepare_backbone_instantiate_cfg(backbone_cfg)
     target = get_object(str(instantiate_cfg._target_))
     target_signature = inspect.signature(target)
     accepts_kwargs = any(
@@ -417,6 +367,20 @@ def instantiate_backbone_for_output(
     return model, get_backbone_contract(backbone_cfg, model=model)
 
 
+def prepare_backbone_instantiate_cfg(backbone_cfg):
+    instantiate_cfg = OmegaConf.create(OmegaConf.to_container(backbone_cfg, resolve=True))
+    for key in (
+        "image_mean",
+        "supported_outputs",
+        "default_global_output",
+        "supports_multilayer",
+        "supports_layer_selection",
+    ):
+        if key in instantiate_cfg:
+            del instantiate_cfg[key]
+    return instantiate_cfg
+
+
 def resolve_pretrained_backbone_targets() -> set[str]:
     targets = set()
     config_dir = Path(__file__).resolve().parents[2] / "configs" / "backbone"
@@ -438,12 +402,3 @@ def validate_multilayer_feat_dim(model) -> None:
         f"{type(feat_dim)}"
     )
 
-
-def require_supported_mode(mode_name: str, supported_modes: Iterable[str], task_name: str) -> None:
-    supported = tuple(supported_modes)
-    if mode_name in supported:
-        return
-    raise ValueError(
-        f"Unsupported mode '{mode_name}' for task '{task_name}'. "
-        f"Supported modes: {list(supported)}"
-    )

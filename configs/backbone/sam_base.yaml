@@ -1,4 +1,5 @@
 _target_: omniprobe.models.sam.SAM
+image_mean: imagenet
 arch: vit_b
 output: dense
 layer: -1

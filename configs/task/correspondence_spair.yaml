@@ -1,35 +1,16 @@
 name: correspondence_spair
-mode: nn
 random_seed: 8
 split: test
 image_size: 800
 eval_class: all
-num_instances: 200
+num_instances: null
 data_root: ${oc.env:SPAIR_ROOT,data/SPair-71k}
-image_mean: ${oc.select:backbone.image_mean,imagenet}
 use_bbox: false
 multilayer: false
 soft_eval: false
 soft_eval_beta: 0.02
 soft_eval_window: 7
-eval_num_instances: 200
-eval_before_training: false
-probe:
-  type: linear
-  output_dim: null
-  hidden_dim: null
-  bias: true
-  init_mode: identity
-train:
-  enabled: true
-  epochs: 3
-  lr: 0.001
-  weight_decay: 0.0
-  temperature: 0.07
-  train_all_classes: true
-  num_instances: null
-  eval_every: 1
-  use_scheduler: true
-  batch_size: 32
-  num_workers: 4
 note: ""
+runner:
+  module: omniprobe.scripts.eval_correspondence_spair
+  required_output: dense

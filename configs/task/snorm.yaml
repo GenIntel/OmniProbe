@@ -1,2 +1,16 @@
+defaults:
+  - /optimizer: ten_epoch
+  - /dataset: nyu
+  - /probe: snorm_dpt
+  - _self_
+
 name: snorm
-mode: default
+system:
+  random_seed: 8
+  num_gpus: 1
+  port: 12355
+note: ""
+batch_size: 8
+runner:
+  module: omniprobe.scripts.train_snorm
+  require_multilayer: true

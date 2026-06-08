@@ -11,13 +11,13 @@ from einops import einsum
 from hydra.utils import instantiate
 from loguru import logger
 from omegaconf import DictConfig
-from tqdm import tqdm
 
 from omniprobe.datasets.spair import CLASS_IDS, SPairDataset
-from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
+from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d
 from omniprobe.models.correspondence_probe import build_correspondence_probe
 from omniprobe.utils.paths import cfg_or_env_path
+from omniprobe.utils.progress import progress
 
 from hydra.core.hydra_config import HydraConfig
 import os
@@ -336,7 +336,7 @@ def train_probe_epoch(model, probe, train_loader, optimizer, cfg, epoch, image_s
     
     loss_meter = AverageMeter()
     
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100)
+    pbar = progress(train_loader, desc=f"Epoch {epoch}")
     
     for batch in pbar:
         img_i = batch["img_i"].to(device)  # (B, 3, H, W)
@@ -396,7 +396,11 @@ def evaluate_dataset_with_probe(
     if probe is not None:
         probe.eval()
     
-    iterator = tqdm(range(len(dataset)), ncols=60) if verbose else range(len(dataset))
+    iterator = (
+        progress(range(len(dataset)), desc="SPair linear-probe evaluation")
+        if verbose
+        else range(len(dataset))
+    )
     errors_all = []
     src_all = []
     tgt_all = []
@@ -464,8 +468,8 @@ def get_feature_dim(model, image_size, device):
 
 def run_task(cfg: DictConfig):
     output_dir = HydraConfig.get().run.dir
-    print(f'Output dir: {output_dir}')
-    vis_dir = os.path.join(output_dir, "vis")
+    logger.info(f"Output dir: {output_dir}")
+    vis_dir = artifact_dir(cfg, "visualizations")
     os.makedirs(vis_dir, exist_ok=True)
     
     # Set seeds for reproducibility
@@ -634,7 +638,7 @@ def run_task(cfg: DictConfig):
             logger.info(f"Loaded best probe with validation recall: {best_recall:.2f}")
         
         # Save trained probe
-        probe_save_path = os.path.join(output_dir, "trained_probe.pth")
+        probe_save_path = artifact_dir(cfg, "checkpoints") / "trained_probe.pth"
         torch.save(probe.state_dict(), probe_save_path)
         logger.info(f"Saved trained probe to {probe_save_path}")
 
@@ -643,8 +647,9 @@ def run_task(cfg: DictConfig):
     logger.info("Final evaluation on test split...")
     logger.info("=" * 50)
     
-    pred_log_path = os.path.join(output_dir, "pred_outputs_spair_correspondence_linear_probe.json")
-    pred_pkl_path = os.path.join(output_dir, "pred_outputs_spair_correspondence_linear_probe.pkl")
+    pred_dir = artifact_dir(cfg, "predictions")
+    pred_log_path = pred_dir / "pred_outputs_spair_correspondence_linear_probe.json"
+    pred_pkl_path = pred_dir / "pred_outputs_spair_correspondence_linear_probe.pkl"
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
 
     class_acc = {}
@@ -708,6 +713,8 @@ def run_task(cfg: DictConfig):
     probe_info = f"probe_{cfg.probe.type}"
     if cfg.train.enabled:
         probe_info += f"_trained_ep{cfg.train.epochs}_lr{cfg.train.lr}"
+    num_instances_label = "all" if cfg.num_instances is None else f"{int(cfg.num_instances):5d}"
+    num_instances_value = None if cfg.num_instances is None else int(cfg.num_instances)
     
     exp_info = ", ".join(
         [
@@ -718,13 +725,12 @@ def run_task(cfg: DictConfig):
             "SPair-71k",
             cfg.split,
             f"{cfg.eval_class:>13s}",
-            f"{cfg.num_instances:5d}",
+            num_instances_label,
             probe_info,
         ]
     )
     entry = build_result_entry(
         "spair",
-        "linear_probe",
         model,
         output_dir,
         cfg,
@@ -732,7 +738,7 @@ def run_task(cfg: DictConfig):
         dataset="SPair-71k",
         split=str(cfg.split),
         eval_class=str(cfg.eval_class),
-        num_instances=int(cfg.num_instances),
+        num_instances=num_instances_value,
         probe=probe_info,
     )
     append_jsonl(
