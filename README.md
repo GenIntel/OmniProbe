@@ -259,7 +259,7 @@ Contributions of new backbones, tasks, and datasets are welcome.
 - **Add a task:** register it in `omniprobe/tasks/__init__.py` and add a `configs/task/<task>.yaml`.
 - **Run the tests:** `pytest tests/ -q` (install the `dev` extra first).
 
-See **[docs/DEVELOP.md](./docs/DEVELOP.md)** for a more detailed developer guide.
+See **[docs/DEVELOP.md](./docs/DEVELOP.md)** for a more detailed developer guide, and **[docs/ROADMAP.md](./docs/ROADMAP.md)** for planned features and open ideas.
 
 
 ## Citation
