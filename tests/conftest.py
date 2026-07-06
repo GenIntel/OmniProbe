@@ -510,43 +510,54 @@ def fake_sam(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# DINOv3 fake model (dinov3.hub.backbones factory)
+# DINOv3 fake model (Hugging Face DINOv3ViTModel)
 # ---------------------------------------------------------------------------
 
-class _FakeDinoV3Model(nn.Module):
-    def __init__(self, embed_dim=768, patch_size=16, n_blocks=12):
-        super().__init__()
-        self.embed_dim = embed_dim
+class _FakeDinoV3Config:
+    def __init__(self, hidden_size=768, patch_size=16, num_register_tokens=4, num_hidden_layers=12):
+        self.hidden_size = hidden_size
         self.patch_size = patch_size
-        self.n_blocks = n_blocks
+        self.num_register_tokens = num_register_tokens
+        self.num_hidden_layers = num_hidden_layers
 
-    def get_intermediate_layers(self, x, n, reshape=False, return_class_token=False, norm=False):
-        B = x.shape[0]
-        h = x.shape[-2] // self.patch_size
-        w = x.shape[-1] // self.patch_size
-        count = len(n) if isinstance(n, (list, tuple)) else n
-        if reshape:
-            patches = torch.zeros(B, self.embed_dim, h, w)
-        else:
-            patches = torch.zeros(B, h * w, self.embed_dim)
-        cls = torch.zeros(B, self.embed_dim)
-        if return_class_token:
-            return [(patches, cls)] * count
-        return [patches] * count
+    @classmethod
+    def from_pretrained(cls, repo_id):
+        return cls()
 
-    def eval(self):
-        return self
 
-    def to(self, *a, **kw):
-        return self
+class _FakeDinoV3Output:
+    def __init__(self, hidden_states):
+        self.hidden_states = hidden_states
+        self.last_hidden_state = hidden_states[-1]
+
+
+class _FakeDinoV3Model(nn.Module):
+    def __init__(self, config=None):
+        super().__init__()
+        self.config = config or _FakeDinoV3Config()
+
+    @classmethod
+    def from_pretrained(cls, repo_id):
+        return cls()
+
+    def forward(self, images, output_hidden_states=False):
+        B = images.shape[0]
+        h = images.shape[-2] // self.config.patch_size
+        w = images.shape[-1] // self.config.patch_size
+        seq_len = 1 + self.config.num_register_tokens + h * w
+        hidden_states = tuple(
+            torch.zeros(B, seq_len, self.config.hidden_size)
+            for _ in range(self.config.num_hidden_layers + 1)
+        )
+        return _FakeDinoV3Output(hidden_states)
 
 
 @pytest.fixture
 def fake_dinov3(monkeypatch):
-    """Patch torch.hub.load to return a tiny fake DINOv3 model."""
-    fake = _FakeDinoV3Model(embed_dim=768, patch_size=16, n_blocks=12)
-    monkeypatch.setattr("torch.hub.load", lambda *a, **kw: fake)
-    return fake
+    """Patch the Hugging Face DINOv3 classes to avoid a real hub download."""
+    monkeypatch.setattr("omniprobe.models.dinov3.DINOv3ViTModel", _FakeDinoV3Model)
+    monkeypatch.setattr("omniprobe.models.dinov3.DINOv3ViTConfig", _FakeDinoV3Config)
+    return _FakeDinoV3Model
 
 
 # ---------------------------------------------------------------------------

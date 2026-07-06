@@ -1,7 +1,0 @@
-_target_: omniprobe.models.dinov3.DinoV3
-image_mean: imagenet
-arch: "convnext_large"
-output: dense
-layer: -1
-return_multilayer: false
-weights: "dinov3/dinov3_convnext_large_pretrain_lvd1689m-61fa432d.pth"

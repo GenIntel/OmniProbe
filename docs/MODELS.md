@@ -15,19 +15,14 @@ The table lists every available config, its weight source(s), and which output m
 | `dinov2_l14` | torch.hub | ✓ | ✓ |
 | `dinov2_g14` | torch.hub | ✓ | ✓ |
 | `dinov2_b14_diy_sc` | torch.hub | ✓ | — |
-| `dinov3_vits16` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vits16plus` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vitb16` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vitl16` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vitl16_sat` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vitl16plus` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vith16plus` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vit7b16` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_vit7b16_sat` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_convnext_tiny` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_convnext_small` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_convnext_base` | torch.hub, ckpt | ✓ | ✓ |
-| `dinov3_convnext_large` | torch.hub, ckpt | ✓ | ✓ |
+| `dinov3_vits16` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vits16plus` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vitb16` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vitl16` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vitl16_sat` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vith16plus` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vit7b16` | HF Hub (gated) | ✓ | ✓ |
+| `dinov3_vit7b16_sat` | HF Hub (gated) | ✓ | ✓ |
 | `c_radio_3_b` | torch.hub | ✓ | ✓ |
 | `c_radio_3_l` | torch.hub | ✓ | ✓ |
 | `c_radio_3_h` | torch.hub | ✓ | ✓ |
@@ -99,7 +94,7 @@ The table lists every available config, its weight source(s), and which output m
 | `internvl3_5_8b` | HF Hub | ✓ | — |
 | `llava_ov_7b` | HF Hub | ✓ | — |
 
-`dift_*` requires the `ldm` package and the LVLM configs (`qwen*`, `internvl*`, `llava*`) require recent `transformers` VL bindings — neither is in the default env.
+`dift_*` requires the `ldm` package and the LVLM configs (`qwen*`, `internvl*`, `llava*`) require recent `transformers` VL bindings — neither is in the default env. `dinov3_*` repos on Hugging Face Hub are gated: request access to the relevant `facebook/dinov3-*` repo(s) and authenticate (`huggingface-cli login` or `HF_TOKEN`) before first use.
 
 ## Environment variables for checkpoint paths
 

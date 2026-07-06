@@ -4,4 +4,4 @@ arch: "vitl16"
 output: dense
 layer: -1
 return_multilayer: false
-weights: 'dinov3/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth'
+weights: "LVD1689M"

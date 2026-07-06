@@ -27,7 +27,7 @@ OmniProbe gives 25+ families of visual foundation models a *single* command-line
 ## Highlights
 
 - **One CLI for every task** — `python -m omniprobe.run task=<task> backbone=<backbone>` has the same shape whether you are matching keypoints or training a depth probe.
-- **92 backbone configs** spanning 25+ model families, all behind one feature interface (`dense` / `cls` / `gap` outputs).
+- **87 backbone configs** spanning 25+ model families, all behind one feature interface (`dense` / `cls` / `gap` outputs).
 - **7 task families** — correspondence (SPair, SOCO, NAVI, ScanNet, AP-10K), depth, surface normals, segmentation (ADE20K), 3D object pose (ImageNet3D), tracking (TAP-Vid), and kNN / linear classification (ImageNet).
 - **Configurable via [Hydra](https://hydra.cc/)** — override any setting from the CLI, or compose your own config layers.
 - **CLI *or* Python** — run from the shell or call `omniprobe.evaluate(...)` directly.
@@ -74,7 +74,7 @@ pip install -e ".[all,knn,dev]"
 ```
 </details>
 
-The code for backbones that build on external repositories (CroCo, I-JEPA, Perception, VGGT, MetaCLIP, PIXIO) is **vendored** under `omniprobe/models/vendor/` — there are no git submodules to fetch. Those models only need their checkpoint files downloaded (see [docs/MODELS.md](./docs/MODELS.md)); DINO/DINOv2/DINOv3, C-RADIO, DUNE and V-JEPA 2 are pulled from `torch.hub` on first use.
+The code for backbones that build on external repositories (CroCo, I-JEPA, Perception, VGGT, MetaCLIP, PIXIO) is **vendored** under `omniprobe/models/vendor/` — there are no git submodules to fetch. Those models only need their checkpoint files downloaded (see [docs/MODELS.md](./docs/MODELS.md)); DINO/DINOv2, C-RADIO, DUNE and V-JEPA 2 are pulled from `torch.hub` on first use. DINOv3 is pulled from Hugging Face Hub (gated — request access to the relevant `facebook/dinov3-*` repos and set `HF_TOKEN` or run `huggingface-cli login`).
 
 
 ## Quickstart
@@ -127,12 +127,12 @@ omniprobe --list-backbones
 
 ### Backbones
 
-92 configs across the families below. Pass any config name as `backbone=<name>`; see **[docs/MODELS.md](./docs/MODELS.md)** for the full per-config table (weight source and supported output modes).
+87 configs across the families below. Pass any config name as `backbone=<name>`; see **[docs/MODELS.md](./docs/MODELS.md)** for the full per-config table (weight source and supported output modes).
 
 | Family | Example configs | Weights |
 |--------|-----------------|---------|
 | DINO / DINOv2 | `dino_b16`, `dinov2_b14`, `dinov2_l14`, `dinov2_b14_reg` | torch.hub |
-| DINOv3 | `dinov3_vitb16`, `dinov3_vitl16`, `dinov3_convnext_base` | torch.hub + ckpt |
+| DINOv3 | `dinov3_vitb16`, `dinov3_vitl16`, `dinov3_vitl16_sat` | HF Hub (`transformers`, gated) |
 | C-RADIO | `c_radio_3_b`, `c_radio_4_h` | torch.hub |
 | DUNE | `dune_vitb14`, `dune_vits14_448` | torch.hub |
 | V-JEPA 2 | `vjepa2_1_base`, `vjepa2_1_large` | torch.hub / ckpt |

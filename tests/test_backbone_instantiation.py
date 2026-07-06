@@ -251,14 +251,10 @@ def test_metaclip_submodule_importable():
 
 
 def test_dinov3_hub_model_list():
-    """Verify the DINOv3 VARIANTS dict is self-consistent (no hub call needed)."""
+    """Verify the DINOv3 VARIANTS set is populated (no hub call needed)."""
     from omniprobe.models.dinov3 import DinoV3
 
     assert "vitb16" in DinoV3.VARIANTS
-    assert all(
-        "hub_fn" in v and "feat_dim" in v
-        for v in DinoV3.VARIANTS.values()
-    )
 
 
 # ---------------------------------------------------------------------------
