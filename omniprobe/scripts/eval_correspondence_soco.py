@@ -7,7 +7,6 @@ from pathlib import Path
 import random
 import json
 import pickle
-from collections.abc import Sequence
 from typing import Dict, Optional, Any
 
 import numpy as np
@@ -21,6 +20,11 @@ from omegaconf import DictConfig, ListConfig, OmegaConf
 from omniprobe.datasets.soco import SOCODataset
 from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d, soft_argmax_2d
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 
 
 def set_seed(seed: int) -> None:
@@ -30,99 +34,11 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-def _to_square_patch_size(value) -> Optional[int]:
-    if value is None:
-        return None
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        if len(value) == 0:
-            return None
-        first = int(value[0])
-        if len(value) > 1 and int(value[1]) != first:
-            raise ValueError(f"Non-square patch size is not supported: {value}.")
-        return first
-    return int(value)
-
-
 def _get_model_device(model) -> torch.device:
     try:
         return next(model.parameters()).device
     except StopIteration:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-@torch.no_grad()
-def _feature_grid_hw(model, image_size: int) -> tuple[int, int]:
-    device = _get_model_device(model)
-    images = torch.randn(1, 3, image_size, image_size, device=device)
-    feats = model(images)
-    if isinstance(feats, list):
-        if len(feats) == 0:
-            raise ValueError("Model returned an empty feature list.")
-        feats = feats[0]
-    if feats.ndim != 4:
-        raise ValueError(f"Expected 4D dense features, got shape {tuple(feats.shape)}")
-    return int(feats.shape[-2]), int(feats.shape[-1])
-
-
-def _infer_patch_size_from_forward(model, probe_image_size: int) -> int:
-    feat_h, feat_w = _feature_grid_hw(model, probe_image_size)
-    if feat_h != feat_w:
-        raise ValueError(
-            f"Expected square feature map for square input, got {(feat_h, feat_w)}"
-        )
-    if feat_h <= 0:
-        raise ValueError(f"Invalid feature map size: {(feat_h, feat_w)}")
-    inferred = int(round(probe_image_size / feat_h))
-    if inferred <= 0:
-        raise ValueError(
-            f"Failed to infer patch size from input {probe_image_size} and grid {feat_h}"
-        )
-    return inferred
-
-
-def _resolve_patch_size(model, probe_image_size: int) -> tuple[int, str]:
-    patch_size = _to_square_patch_size(getattr(model, "patch_size", None))
-    if patch_size is not None and patch_size > 0:
-        return patch_size, "model.patch_size"
-    inferred = _infer_patch_size_from_forward(model, probe_image_size)
-    return inferred, "inferred_from_forward"
-
-
-def _resolve_effective_image_size(cfg: DictConfig, model) -> Dict[str, Any]:
-    image_size = int(cfg.image_size)
-    num_patches = int(cfg.get("num_patches", 60))
-    fixed_patched_size = bool(cfg.get("fixed_patched_size", False))
-    patch_size, patch_size_source = _resolve_patch_size(model, probe_image_size=image_size)
-
-    if patch_size <= 0:
-        raise ValueError(f"Resolved patch_size must be > 0, got {patch_size}")
-
-    if not fixed_patched_size:
-        return {
-            "image_size": image_size,
-            "patch_size": patch_size,
-            "patch_size_source": patch_size_source,
-            "verified_grid_hw": None,
-        }
-
-    if num_patches <= 0:
-        raise ValueError(f"num_patches must be > 0, got {num_patches}")
-
-    effective_image_size = num_patches * patch_size
-    feat_h, feat_w = _feature_grid_hw(model, effective_image_size)
-    if feat_h != num_patches or feat_w != num_patches:
-        raise ValueError(
-            "fixed_patched_size=True requested "
-            f"{num_patches}x{num_patches} patches, but got {feat_h}x{feat_w} "
-            f"for image_size={effective_image_size} and patch_size={patch_size} "
-            f"({patch_size_source})."
-        )
-    return {
-        "image_size": effective_image_size,
-        "patch_size": patch_size,
-        "patch_size_source": patch_size_source,
-        "verified_grid_hw": (feat_h, feat_w),
-    }
 
 
 def compute_predictions(
@@ -475,17 +391,9 @@ def run_task(cfg: DictConfig):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     model.eval()
-    image_size_info = _resolve_effective_image_size(cfg, model)
-    effective_image_size = int(image_size_info["image_size"])
-    logger.info(
-        "Image resolution: {} (fixed_patched_size={}, num_patches={}, resolved_patch_size={}, patch_size_source={}, verified_grid_hw={})",
-        effective_image_size,
-        bool(cfg.get("fixed_patched_size", False)),
-        int(cfg.get("num_patches", 60)),
-        image_size_info["patch_size"],
-        image_size_info["patch_size_source"],
-        image_size_info["verified_grid_hw"],
-    )
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
 
     data_root = cfg.data_root
     pair_subdir = cfg.pair_subdir
@@ -597,5 +505,6 @@ def run_task(cfg: DictConfig):
         cfg,
         {"semantic": sem_mean, "concept": concept_mean},
         dataset="SOCO",
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(resolve_results_path(cfg, "correspondence_soco.jsonl"), entry)

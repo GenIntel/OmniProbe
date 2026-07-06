@@ -60,6 +60,7 @@ def _dense_cfg(task_name):
                 "num_workers": 0,
                 "knn_k": [1],
                 "temperature": 0.07,
+                "output_preference": ["cls", "gap"],
                 "result_log": "/tmp/omniprobe-tests.jsonl",
                 "soft_eval": False,
                 "matching_strategy": "nn",
@@ -94,6 +95,7 @@ def _global_cfg():
                 "num_workers": 0,
                 "knn_k": [1],
                 "temperature": 0.07,
+                "output_preference": ["cls", "gap"],
                 "result_log": "/tmp/omniprobe-tests.jsonl",
             },
         }
@@ -273,12 +275,13 @@ def test_invalid_task_backbone_combo_fails_clearly():
                 "num_workers": 0,
                 "knn_k": [1],
                 "temperature": 0.07,
+                "output_preference": ["cls", "gap"],
                 "result_log": "/tmp/omniprobe-tests.jsonl",
             },
         }
     )
     module = load_task_module("classification_imagenet_knn")
-    with pytest.raises(ValueError, match="does not expose a global output"):
+    with pytest.raises(ValueError, match="does not support any output from task.output_preference"):
         module.run(cfg, _context())
 
 
@@ -539,6 +542,33 @@ def test_imagenet_knn_smoke(monkeypatch):
     assert result["output"] == "cls"
     assert result["output_dir"] == "/tmp/omniprobe-tests"
     assert isinstance(result["config"], str)
+
+
+def test_imagenet_knn_prefers_cls_over_gap():
+    import omniprobe.tasks.imagenet_knn as task_module
+    from omniprobe.models.contracts import get_backbone_contract
+
+    contract = get_backbone_contract(_global_cfg().backbone)
+    task_cfg = OmegaConf.create({"knn_k": [1], "output_preference": ["cls", "gap"]})
+    assert task_module._resolve_knn_output(contract, task_cfg) == "cls"
+
+
+def test_imagenet_knn_falls_back_when_cls_is_unavailable():
+    import omniprobe.tasks.imagenet_knn as task_module
+    from omniprobe.models.contracts import get_backbone_contract
+
+    contract = get_backbone_contract(_dense_cfg("classification_imagenet_knn").backbone)
+    task_cfg = OmegaConf.create({"knn_k": [1], "output_preference": ["cls", "gap"]})
+    assert task_module._resolve_knn_output(contract, task_cfg) == "gap"
+
+
+def test_imagenet_knn_respects_configured_output_preference():
+    import omniprobe.tasks.imagenet_knn as task_module
+    from omniprobe.models.contracts import get_backbone_contract
+
+    contract = get_backbone_contract(_global_cfg().backbone)
+    task_cfg = OmegaConf.create({"knn_k": [1], "output_preference": ["gap", "cls"]})
+    assert task_module._resolve_knn_output(contract, task_cfg) == "gap"
 
 
 def test_imagenet_loaders_use_backbone_image_mean(monkeypatch):

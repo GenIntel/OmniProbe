@@ -7,3 +7,4 @@ batch_size: 256
 num_workers: 8
 knn_k: [20, 100, 200]
 temperature: 0.07
+output_preference: [cls, gap]  # tried in order; first output the backbone supports is used for kNN

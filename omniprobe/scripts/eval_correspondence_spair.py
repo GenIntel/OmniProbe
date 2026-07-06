@@ -14,6 +14,11 @@ from omegaconf import DictConfig
 from omniprobe.datasets.spair import CLASS_IDS, SPairDataset
 from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d, soft_argmax_2d
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 from omniprobe.utils.paths import cfg_or_env_path
 from omniprobe.utils.progress import progress
 
@@ -85,9 +90,8 @@ def _serialize_pred_output(pred_output):
     return out
 
 
-@torch.no_grad()
-def compute_predictions(
-    model,
+def match_keypoints(
+    feats,
     instance,
     mask_feats=False,
     return_heatmaps=False,
@@ -95,23 +99,20 @@ def compute_predictions(
     soft_eval_beta=0.02,
     soft_eval_window=7,
 ):
+    """Match keypoints from precomputed dense features (the part after model(images))."""
     img_i, mask_i, kps_i, img_j, mask_j, kps_j, thresh_scale, class_name = instance
-    mask_i = torch.tensor(np.array(mask_i, dtype=float))
-    mask_j = torch.tensor(np.array(mask_j, dtype=float))
-    device = _get_model_device(model)
 
-    images = torch.stack((img_i, img_j)).to(device)
-    masks = torch.stack((mask_i, mask_j)).to(device)
-    masks = torch.nn.functional.avg_pool2d(masks.float(), 16)
-    masks = masks > 4 / (16 ** 2)
-
-    feats = model(images)
     if isinstance(feats, list):
         feats = torch.cat(feats, dim=1)
-
+    device = feats.device
     feats = nn_F.normalize(feats, p=2, dim=1)
 
     if mask_feats:
+        mask_i = torch.tensor(np.array(mask_i, dtype=float))
+        mask_j = torch.tensor(np.array(mask_j, dtype=float))
+        masks = torch.stack((mask_i, mask_j)).to(device)
+        masks = torch.nn.functional.avg_pool2d(masks.float(), 16)
+        masks = masks > 4 / (16 ** 2)
         if masks.shape[-2:] != feats.shape[-2:]:
             masks = nn_F.interpolate(
                 masks.unsqueeze(1).float(),
@@ -124,11 +125,12 @@ def compute_predictions(
     feats_j = feats[1]
 
     # normalize kps to [0, 1]
-    assert images.shape[-1] == images.shape[-2], "assuming square images here"
+    assert img_i.shape[-1] == img_i.shape[-2], "assuming square images here"
+    img_size = img_i.shape[-1]
     kps_i = kps_i.float()
     kps_j = kps_j.float()
-    kps_i[:, :2] = kps_i[:, :2] / images.shape[-1]
-    kps_j[:, :2] = kps_j[:, :2] / images.shape[-1]
+    kps_i[:, :2] = kps_i[:, :2] / img_size
+    kps_j[:, :2] = kps_j[:, :2] / img_size
 
     # get correspondences
     kps_i_ndc = (kps_i[:, :2].float() * 2 - 1)[None, None].to(device)
@@ -163,6 +165,32 @@ def compute_predictions(
     return pred_output
 
 
+@torch.no_grad()
+def compute_predictions(
+    model,
+    instance,
+    mask_feats=False,
+    return_heatmaps=False,
+    soft_eval=False,
+    soft_eval_beta=0.02,
+    soft_eval_window=7,
+    categories=None,
+):
+    img_i, mask_i, kps_i, img_j, mask_j, kps_j, thresh_scale, class_name = instance
+    device = _get_model_device(model)
+    images = torch.stack((img_i, img_j)).to(device)
+    feats = model(images) if categories is None else model(images, categories=categories)
+    return match_keypoints(
+        feats,
+        instance,
+        mask_feats=mask_feats,
+        return_heatmaps=return_heatmaps,
+        soft_eval=soft_eval,
+        soft_eval_beta=soft_eval_beta,
+        soft_eval_window=soft_eval_window,
+    )
+
+
 def compute_errors(
     model,
     instance,
@@ -171,6 +199,7 @@ def compute_errors(
     soft_eval=False,
     soft_eval_beta=0.02,
     soft_eval_window=7,
+    categories=None,
 ):
     pred_output = compute_predictions(
         model,
@@ -180,7 +209,14 @@ def compute_errors(
         soft_eval,
         soft_eval_beta,
         soft_eval_window,
+        categories=categories,
     )
+    error_same, error_nn, index_same, index_nn = errors_from_pred(pred_output)
+    return error_same, error_nn, index_same, index_nn, pred_output
+
+
+def errors_from_pred(pred_output):
+    """Threshold-scaled keypoint errors (same-index PCK + nearest-neighbour) from a prediction."""
     pred_kp = pred_output["pred"]
     kps_i = pred_output["gt_src"]
     kps_j = pred_output["gt_trg"]
@@ -201,7 +237,7 @@ def compute_errors(
     error_nn, index_nn = errors[in_both].min(dim=1)
     index_same = in_both.nonzero().squeeze(1)
 
-    return error_same, error_nn, index_same, index_nn, pred_output
+    return error_same, error_nn, index_same, index_nn
 
 
 def evaluate_dataset(
@@ -216,6 +252,7 @@ def evaluate_dataset(
     soft_eval=False,
     soft_eval_beta=0.02,
     soft_eval_window=7,
+    category=None,
 ):
     iterator = (
         progress(range(len(dataset)), desc="SPair evaluation")
@@ -225,6 +262,7 @@ def evaluate_dataset(
     errors_all = []
     src_all = []
     tgt_all = []
+    categories = None if category is None else [category, category]
 
     for idx in iterator:
         error_same, _, index_same, index_nn, pred_output = compute_errors(
@@ -233,6 +271,7 @@ def evaluate_dataset(
             soft_eval=soft_eval,
             soft_eval_beta=soft_eval_beta,
             soft_eval_window=soft_eval_window,
+            categories=categories,
         )
         errors_all.append(error_same)
         src_all.append(index_same)
@@ -296,6 +335,10 @@ def run_task(cfg: DictConfig):
     model = instantiate(cfg.backbone, **backbone_kwargs)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
+    model.eval()
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
 
     # ===== GET DATA LOADERS =====
     if cfg.eval_class == "all":
@@ -310,6 +353,7 @@ def run_task(cfg: DictConfig):
     logger.info(f"Logging per-pair predictions to {pred_log_path}")
 
     vps = [None,] #0, 1, 2,  #If interested in multiple viewpoint differences, add them here
+    use_class_prompt = cfg.use_class_prompt
     class_acc = {}
     pred_records = []
     with open(pred_log_path, "w") as pred_log_fh:
@@ -321,7 +365,7 @@ def run_task(cfg: DictConfig):
                     data_root,
                     cfg.split,
                     use_bbox=cfg.use_bbox,
-                    image_size=cfg.image_size,
+                    image_size=effective_image_size,
                     image_mean=cfg.image_mean,
                     class_name=class_name,
                     num_instances=cfg.num_instances,
@@ -341,6 +385,7 @@ def run_task(cfg: DictConfig):
                         soft_eval=cfg.soft_eval,
                         soft_eval_beta=cfg.soft_eval_beta,
                         soft_eval_window=cfg.soft_eval_window,
+                        category=class_name if use_class_prompt else None,
                     )
                     logger.info(
                         f"Recall@{thresh} {class_name:>13s} {vp_label} |  {rec_i:6.2f}"
@@ -380,6 +425,7 @@ def run_task(cfg: DictConfig):
         split=str(cfg.split),
         eval_class=str(cfg.eval_class),
         num_instances=None if cfg.num_instances is None else int(cfg.num_instances),
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(
         resolve_results_path(cfg, "correspondence_spair.jsonl"),

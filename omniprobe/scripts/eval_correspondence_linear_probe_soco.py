@@ -28,6 +28,11 @@ from omniprobe.datasets.soco import SOCODataset
 from omniprobe.utils.correspondence import argmax_2d
 from omniprobe.models.correspondence_probe import build_correspondence_probe
 from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 from omniprobe.utils.progress import progress
 
 
@@ -440,9 +445,12 @@ def run_task(cfg: DictConfig):
     model = instantiate(cfg.backbone, output="dense", return_multilayer=cfg.multilayer)
     model = model.to(device)
     model.eval()
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
 
     # Get feature dimension
-    feat_dim = get_feature_dim(model, cfg.image_size, device)
+    feat_dim = get_feature_dim(model, effective_image_size, device)
     logger.info(f"Backbone feature dimension: {feat_dim}")
 
     # ===== Build linear probe =====
@@ -490,7 +498,7 @@ def run_task(cfg: DictConfig):
     # ===== Load train and test datasets from predefined splits =====
     dataset_kwargs = dict(
         root=data_root,
-        image_size=cfg.image_size,
+        image_size=effective_image_size,
         image_mean=cfg.image_mean,
         use_bbox=cfg.use_bbox,
         max_pairs=cfg.max_pairs,
@@ -565,7 +573,7 @@ def run_task(cfg: DictConfig):
             set_seed(seed + epoch)
             
             avg_loss = train_probe_epoch(
-                model, probe, train_loader, optimizer, cfg.train, epoch, cfg.image_size, device
+                model, probe, train_loader, optimizer, cfg.train, epoch, effective_image_size, device
             )
             logger.info(f"Epoch {epoch}/{cfg.train.epochs} - Loss: {avg_loss:.4f}")
             
@@ -671,5 +679,6 @@ def run_task(cfg: DictConfig):
         cfg,
         {"semantic": sem_mean, "concept": concept_mean},
         dataset="SOCO",
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(resolve_results_path(cfg, "correspondence_soco_linear_probe.jsonl"), entry)

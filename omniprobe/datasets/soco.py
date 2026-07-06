@@ -44,6 +44,9 @@ class SOCODataset(torch.utils.data.Dataset):
         elif image_mean in ["raw", "zeros"]:
             mean = [0.0, 0.0, 0.0]
             std = [1.0, 1.0, 1.0]
+        elif image_mean in ["perception", "halves"]:
+            mean = [0.5, 0.5, 0.5]
+            std = [0.5, 0.5, 0.5]
         else:
             raise ValueError(f"Unsupported image_mean '{image_mean}'")
 

@@ -25,6 +25,18 @@ REQUIRED_SAMPLE_SCHEMA = "Tuple[image, class_index]"
 REQUIRED_BACKBONE_OUTPUTS = ("cls", "gap", "map")
 
 
+def _resolve_knn_output(contract, task_cfg) -> str:
+    for output_name in task_cfg.output_preference:
+        output_name = str(output_name)
+        if contract.supports_output(output_name):
+            return output_name
+    raise ValueError(
+        f"Backbone '{contract.target}' does not support any output from "
+        f"task.output_preference={list(task_cfg.output_preference)}. "
+        f"Supported outputs: {list(contract.supported_outputs)}"
+    )
+
+
 def _extract_features(model, loader, device, split_name: str = "split"):
     features = []
     targets = []
@@ -116,10 +128,7 @@ def _knn_predict(train_feats, train_labels, val_feats, val_targets, k_list, temp
 def run(cfg, context):
     log_runtime_header(TASK_NAME, context)
     contract = get_backbone_contract(cfg.backbone)
-    output_name = contract.resolve_global_output()
-    if "output" in cfg.task and cfg.task.output is not None:
-        output_name = str(cfg.task.output)
-        contract.require_output(output_name, TASK_NAME)
+    output_name = _resolve_knn_output(contract, cfg.task)
     model, contract = instantiate_backbone_for_output(
         cfg.backbone,
         output_name=output_name,

@@ -3,6 +3,7 @@ random_seed: 8
 split: test
 data_root: ${oc.env:AP10K_ROOT,data/AP-10K}
 image_size: 800
+image_size_policy: nearest_multiple
 eval_class: all
 num_instances: 5000
 use_bbox: false

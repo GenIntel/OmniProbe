@@ -16,6 +16,11 @@ from omniprobe.datasets.spair import CLASS_IDS, SPairDataset
 from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d
 from omniprobe.models.correspondence_probe import build_correspondence_probe
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 from omniprobe.utils.paths import cfg_or_env_path
 from omniprobe.utils.progress import progress
 
@@ -491,9 +496,12 @@ def run_task(cfg: DictConfig):
     model = instantiate(cfg.backbone, **backbone_kwargs)
     model = model.to(device)
     model.eval()  # Freeze backbone
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
     
     # Get feature dimension
-    feat_dim = get_feature_dim(model, cfg.image_size, device)
+    feat_dim = get_feature_dim(model, effective_image_size, device)
     logger.info(f"Backbone feature dimension: {feat_dim}")
 
     # ===== Build linear probe =====
@@ -532,7 +540,7 @@ def run_task(cfg: DictConfig):
             data_root,
             "test",
             use_bbox=cfg.use_bbox,
-            image_size=cfg.image_size,
+            image_size=effective_image_size,
             image_mean=cfg.image_mean,
             class_name=None,  # All classes
             num_instances=cfg.get("eval_num_instances", 200),
@@ -554,7 +562,7 @@ def run_task(cfg: DictConfig):
             data_root,
             "train",
             use_bbox=cfg.use_bbox,
-            image_size=cfg.image_size,
+            image_size=effective_image_size,
             image_mean=cfg.image_mean,
             class_name=None if cfg.train.train_all_classes else cfg.eval_class,
             num_instances=cfg.train.get("num_instances", None),
@@ -604,7 +612,7 @@ def run_task(cfg: DictConfig):
             set_seed(seed + epoch)
             
             avg_loss = train_probe_epoch(
-                model, probe, train_loader, optimizer, cfg.train, epoch, cfg.image_size, device
+                model, probe, train_loader, optimizer, cfg.train, epoch, effective_image_size, device
             )
             logger.info(f"Epoch {epoch}/{cfg.train.epochs} - Loss: {avg_loss:.4f}")
             
@@ -617,7 +625,7 @@ def run_task(cfg: DictConfig):
                     data_root,
                     "valid",
                     use_bbox=cfg.use_bbox,
-                    image_size=cfg.image_size,
+                    image_size=effective_image_size,
                     image_mean=cfg.image_mean,
                     class_name=None,
                     num_instances=cfg.get("eval_num_instances", 200),
@@ -663,7 +671,7 @@ def run_task(cfg: DictConfig):
                     data_root,
                     cfg.split,
                     use_bbox=cfg.use_bbox,
-                    image_size=cfg.image_size,
+                    image_size=effective_image_size,
                     image_mean=cfg.image_mean,
                     class_name=class_name,
                     num_instances=cfg.num_instances,
@@ -740,6 +748,7 @@ def run_task(cfg: DictConfig):
         eval_class=str(cfg.eval_class),
         num_instances=num_instances_value,
         probe=probe_info,
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(
         resolve_results_path(cfg, "correspondence_spair_linear_probe.jsonl"),

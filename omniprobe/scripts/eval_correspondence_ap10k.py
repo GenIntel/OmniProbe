@@ -14,6 +14,11 @@ from omegaconf import DictConfig
 from omniprobe.datasets.ap10k import AP10KDataset, get_ap10k_categories
 from omniprobe.runtime import append_jsonl, artifact_dir, build_result_entry, resolve_results_path
 from omniprobe.utils.correspondence import argmax_2d
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 from omniprobe.utils.paths import cfg_or_env_path
 from omniprobe.utils.progress import progress
 
@@ -89,7 +94,8 @@ def compute_predictions(model, instance, mask_feats=False, return_heatmaps=False
     masks = torch.nn.functional.avg_pool2d(masks.float(), 16)
     masks = masks > 4 / (16 ** 2)
 
-    feats = model(images)
+    with torch.no_grad():
+        feats = model(images)
     if isinstance(feats, list):
         feats = torch.cat(feats, dim=1)
 
@@ -245,6 +251,10 @@ def run_task(cfg: DictConfig):
     )
     model = instantiate(cfg.backbone, **backbone_kwargs)
     model = model.to(device)
+    model.eval()
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
 
     # ===== GET CATEGORIES =====
     if cfg.eval_class == "all":
@@ -270,7 +280,7 @@ def run_task(cfg: DictConfig):
                 data_root,
                 cfg.split,
                 use_bbox=cfg.use_bbox,
-                image_size=cfg.image_size,
+                image_size=effective_image_size,
                 image_mean=cfg.image_mean,
                 class_name=class_name,
                 num_instances=cfg.num_instances,
@@ -321,5 +331,6 @@ def run_task(cfg: DictConfig):
         eval_subset=eval_subset,
         eval_class=str(cfg.eval_class),
         num_instances=int(cfg.num_instances),
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(resolve_results_path(cfg, "correspondence_ap10k.jsonl"), entry)

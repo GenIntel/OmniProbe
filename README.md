@@ -222,6 +222,7 @@ Practical rule:
 
 - Change `configs/task/<task_config>.yaml` for user-facing task protocol defaults.
 - Change `configs/backbone/<backbone>.yaml` for model-specific input normalization. Runtime plumbing forwards `${backbone.image_mean}` to datasets and legacy scripts.
+- Correspondence tasks use `task.image_size` as the requested protocol size. SOCO, SPair, and AP-10K resolve it to the nearest multiple of the backbone patch size before resizing images/keypoints; logs and result rows include both `requested_image_size` and `effective_image_size`.
 - Per-run logs and artifacts are written to `outputs/<date>/<run>/`. Aggregate JSONL summaries stay in `results/`.
 - Each task config writes to its own `results/<task>.jsonl` (e.g. `correspondence_soco.jsonl` vs `correspondence_soco_linear_probe.jsonl`), so distinct protocols are separated by file rather than by a record field. In-protocol toggles such as `task.soft_eval=true` stay recoverable from the per-record embedded `config`.
 - Use Hydra CLI overrides for one-off runs:

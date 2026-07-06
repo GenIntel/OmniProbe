@@ -19,7 +19,7 @@ from omniprobe.utils.losses import DepthLoss
 from omniprobe.utils.metrics import evaluate_depth, match_scale_and_shift
 from omniprobe.utils.optim import cosine_decay_linear_warmup
 from omniprobe.utils.progress import progress
-from omniprobe.utils.training import ddp_setup, ddp_cleanup, unwrap_model
+from omniprobe.utils.training import ddp_setup, ddp_cleanup, set_seed, unwrap_model
 
 
 def train(
@@ -165,15 +165,23 @@ def train_model(rank, world_size, cfg):
     if world_size > 1:
         ddp_setup(rank, world_size, cfg.system.port)
     device = torch.device("cuda", rank) if torch.cuda.is_available() else torch.device("cpu")
+    seed = int(cfg.system.random_seed)
 
     # ===== GET DATA LOADERS =====
     # validate and test on single gpu
-    trainval_loader = build_loader(cfg.dataset, "trainval", cfg.batch_size, world_size)
+    trainval_loader = build_loader(
+        cfg.dataset,
+        "trainval",
+        cfg.batch_size,
+        world_size,
+        seed=seed,
+    )
     test_loader = build_loader(cfg.dataset, "test", cfg.batch_size, 1)
     trainval_loader.dataset.__getitem__(0)
 
     # ===== Get models =====
     model = instantiate(cfg.backbone)
+    set_seed(seed)
     probe = instantiate(
         cfg.probe, feat_dim=model.feat_dim, max_depth=trainval_loader.dataset.max_depth
     )

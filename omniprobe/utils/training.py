@@ -1,8 +1,21 @@
 import os
+import random
 
+import numpy as np
 import torch
 from torch.distributed import destroy_process_group, init_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
+
+
+def set_seed(seed: int):
+    """Seed Python, NumPy, Torch, and CUDA RNGs for reproducible probe training."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
 
 def ddp_setup(rank: int, world_size: int, port: int = 12355):

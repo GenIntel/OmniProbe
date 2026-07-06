@@ -7,6 +7,7 @@ test_pair_subdir: PairAnnotations/trainsplits/test
 classes: all
 max_pairs: null
 image_size: 800
+image_size_policy: nearest_multiple
 use_bbox: false
 thresh: 0.10
 mask_feats: false

@@ -48,7 +48,8 @@ def run_task(cfg: DictConfig):
         Rt_gt = instance["Rt_1"].float()[:3, :4]
         R_gt.append(Rt_gt[:3, :3])
 
-        feats = model(rgbs.to(device))
+        with torch.no_grad():
+            feats = model(rgbs.to(device))
         if cfg.multilayer:
             feats = torch.cat(feats, dim=1)
 

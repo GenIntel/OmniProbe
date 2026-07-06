@@ -41,8 +41,9 @@ def run_task(cfg: DictConfig):
     intrinsics = []
 
     for batch in progress(loader, desc="NAVI feature extraction"):
-        feat_0 = model(batch["image_0"].to(device))
-        feat_1 = model(batch["image_1"].to(device))
+        with torch.no_grad():
+            feat_0 = model(batch["image_0"].to(device))
+            feat_1 = model(batch["image_1"].to(device))
         if cfg.multilayer:
             feat_0 = torch.cat(feat_0, dim=1)
             feat_1 = torch.cat(feat_1, dim=1)

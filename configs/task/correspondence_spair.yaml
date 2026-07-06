@@ -2,10 +2,12 @@ name: correspondence_spair
 random_seed: 8
 split: test
 image_size: 800
+image_size_policy: nearest_multiple
 eval_class: all
 num_instances: null
 data_root: ${oc.env:SPAIR_ROOT,data/SPair-71k}
 use_bbox: false
+use_class_prompt: false       # if true, pass "a photo of a {class}" to prompt-aware backbones (FLUX/DIFT)
 multilayer: false
 soft_eval: false
 soft_eval_beta: 0.02

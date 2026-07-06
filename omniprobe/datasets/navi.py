@@ -220,19 +220,19 @@ class NAVI(torch.utils.data.Dataset):
 
         # get all image folders
         all_collections = []
-        all_collections += glob.glob(str(self.data_root / "*/multiview_*"))
-        all_collections += glob.glob(str(self.data_root / "*/wild_set"))
+        all_collections += sorted(glob.glob(str(self.data_root / "*/multiview_*")))
+        all_collections += sorted(glob.glob(str(self.data_root / "*/wild_set")))
 
         # parse image folders
         for collection_path in all_collections:
             object_id, collection_id = collection_path.split("/")[-2:]
 
             # get image ids
-            img_files = os.listdir(os.path.join(collection_path, "images"))
+            img_files = sorted(os.listdir(os.path.join(collection_path, "images")))
             img_ids = [_file.split(".")[0] for _file in img_files if "jpg" in _file]
 
             # drop "small_" variants (ids containing an underscore)
-            img_ids = [_id for _id in img_ids if "_" not in _id]
+            img_ids = sorted(_id for _id in img_ids if "_" not in _id)
 
             # load annotations and convert them to a dictionary
             with open(os.path.join(collection_path, "annotations.json")) as f:
@@ -255,7 +255,7 @@ class NAVI(torch.utils.data.Dataset):
     def define_instances_split(self, model, collection, subpart):
         # get a list of object names
         if model == "all":
-            object_names = list(self.data_dict.keys())
+            object_names = sorted(self.data_dict.keys())
         else:
             object_names = [model]
 
@@ -266,7 +266,7 @@ class NAVI(torch.utils.data.Dataset):
         self.objects = []
 
         for obj_id in object_names:
-            scenes = list(self.data_dict[obj_id].keys())
+            scenes = sorted(self.data_dict[obj_id].keys())
             if "wild_set" not in scenes or len(scenes) == 1:
                 logger.info(f"Skipping object {obj_id}.")
                 continue
@@ -274,7 +274,7 @@ class NAVI(torch.utils.data.Dataset):
                 self.objects.append(obj_id)
 
             if collection == "wild":
-                image_ids = self.data_dict[obj_id]["wild_set"]["views"]
+                image_ids = sorted(self.data_dict[obj_id]["wild_set"]["views"])
                 image_ann = self.data_dict[obj_id]["wild_set"]["annotations"]
                 assert len(image_ids) > 1
 
@@ -288,7 +288,7 @@ class NAVI(torch.utils.data.Dataset):
                         elif subpart == "test" and im_split == "val":
                             self.instances.append((obj_id, "wild_set", _id))
             else:
-                scenes = [_s for _s in scenes if "multiview" in _s]
+                scenes = sorted(_s for _s in scenes if "multiview" in _s)
 
                 # int floors -> at least 1 validation scene
                 train_split = int(0.9 * len(scenes))
@@ -306,7 +306,7 @@ class NAVI(torch.utils.data.Dataset):
                     continue
 
                 for scene in scenes:
-                    image_ids = self.data_dict[obj_id][scene]["views"]
+                    image_ids = sorted(self.data_dict[obj_id][scene]["views"])
                     for _id in image_ids:
                         self.instances.append((obj_id, scene, _id))
 
@@ -315,7 +315,7 @@ class NAVI(torch.utils.data.Dataset):
         self.objects = {_obj: _id for _id, _obj in enumerate(self.objects)}
 
     def generate_instance_pairs(self, instances):
-        torch.manual_seed(8)
+        generator = torch.Generator().manual_seed(8)
         inst_dict = {}
         for ins in instances:
             obj_id, coll_id, img_id = ins
@@ -354,7 +354,7 @@ class NAVI(torch.utils.data.Dataset):
                     rel_ang_deg[rel_ang_deg > 0] = 1
 
                     # sample an element
-                    pair_i = torch.multinomial(rel_ang_deg, 1).item()
+                    pair_i = torch.multinomial(rel_ang_deg, 1, generator=generator).item()
                     pair_dict[obj_id][col_id][img_id] = img_ids[pair_i]
 
         return pair_dict

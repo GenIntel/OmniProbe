@@ -19,7 +19,12 @@ from omegaconf import DictConfig, ListConfig, OmegaConf
 
 from omniprobe.datasets.soco import SOCODataset
 from omniprobe.runtime import append_jsonl, build_result_entry, resolve_results_path
-from omniprobe.scripts.eval_correspondence_soco import _resolve_effective_image_size, set_seed
+from omniprobe.scripts.eval_correspondence_soco import set_seed
+from omniprobe.utils.eval_helpers import (
+    correspondence_image_size_result_fields,
+    log_correspondence_image_size,
+    resolve_correspondence_image_size,
+)
 
 
 def _valid_index(idx: int, size: int) -> bool:
@@ -227,17 +232,9 @@ def run_task(cfg: DictConfig):
     model = model.to(device)
     model.eval()
 
-    image_size_info = _resolve_effective_image_size(cfg, model)
-    effective_image_size = int(image_size_info["image_size"])
-    logger.info(
-        "Image resolution: {} (fixed_patched_size={}, num_patches={}, resolved_patch_size={}, patch_size_source={}, verified_grid_hw={})",
-        effective_image_size,
-        bool(cfg.get("fixed_patched_size", False)),
-        int(cfg.get("num_patches", 60)),
-        image_size_info["patch_size"],
-        image_size_info["patch_size_source"],
-        image_size_info["verified_grid_hw"],
-    )
+    image_size_info = resolve_correspondence_image_size(cfg, model)
+    effective_image_size = int(image_size_info["effective_image_size"])
+    log_correspondence_image_size(image_size_info)
 
     data_root = cfg.data_root
     pair_subdir = cfg.pair_subdir
@@ -334,5 +331,6 @@ def run_task(cfg: DictConfig):
         {"pck": mean_pck},
         dataset="GeometricSOCO",
         stats=aggregate_stats,
+        **correspondence_image_size_result_fields(image_size_info),
     )
     append_jsonl(resolve_results_path(cfg, "correspondence_geometric_soco.jsonl"), entry)

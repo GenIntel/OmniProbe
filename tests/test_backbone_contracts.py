@@ -71,6 +71,8 @@ def test_c_radio_contract_disables_layer_selection():
     cfg = OmegaConf.load(root / "configs" / "backbone" / "c_radio_3_b.yaml")
     contract = get_backbone_contract(cfg)
     assert contract.supports_layer_selection is False
+    assert contract.supports_output("cls")
+    assert contract.resolve_global_output() == "gap"
 
 
 @pytest.mark.parametrize(

@@ -175,6 +175,8 @@ Use `required_output: global` for tasks that consume the backbone's default glob
 
 `run_script_task` (`omniprobe/tasks/script_task.py`) flattens `cfg.task` into the legacy script config, excluding control/internal keys (`name`, `runner`), then applies backbone/device and runner overrides before importing the module and calling `run_task(cfg)`. Precedence is `selected task config < CLI/Python task overrides < runner overrides`.
 
+Correspondence scripts should use `resolve_correspondence_image_size` from `omniprobe.utils.eval_helpers` before constructing datasets. This keeps resized images, keypoints, masks, and dense feature grids in one coordinate frame: fixed image-size protocols round the requested `task.image_size` to the nearest patch-size multiple, while fixed-patch protocols use `num_patches * patch_size`.
+
 **Native tasks** (no script delegation) implement `run(cfg, context)` in their module and are registered in `_NATIVE_TASK_MODULES` (e.g. `classification_imagenet_knn`).
 
 ---

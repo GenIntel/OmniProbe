@@ -69,14 +69,14 @@ _BACKBONE_CONTRACTS = {
     ),
     "omniprobe.models.c_radio.CRADIOv3Backbone": BackboneContract(
         "omniprobe.models.c_radio.CRADIOv3Backbone",
-        ("dense", "gap"),
+        ("dense", "gap", "cls"),
         "gap",
         True,
         False,
     ),
     "omniprobe.models.c_radio.CRADIOv4Backbone": BackboneContract(
         "omniprobe.models.c_radio.CRADIOv4Backbone",
-        ("dense", "gap"),
+        ("dense", "gap", "cls"),
         "gap",
         True,
         False,
@@ -401,4 +401,3 @@ def validate_multilayer_feat_dim(model) -> None:
         f"Backbone '{model.__class__.__name__}' has unsupported feat_dim type "
         f"{type(feat_dim)}"
     )
-
