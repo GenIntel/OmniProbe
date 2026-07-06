@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 import torch
 
 from . import model as model_zoo
+from . import model_worldwide as _model_worldwide
 from .model import CLIP, convert_weights_to_fp16, resize_pos_embed
 from .openai import load_openai_model
 from .pretrained import get_pretrained_url, download_pretrained
@@ -97,20 +98,14 @@ def create_model(
             else:
                 assert False, 'pretrained image towers currently only supported for timm models'
             
-        import importlib
-        for model_code in os.listdir(f"src/mini_clip"):
-            if not model_code.endswith(".py"):
-                continue
-            if not model_code.startswith("model"):
-                continue
-            module_name = "src.mini_clip." + model_code[:-len(".py")]
-            module = importlib.import_module(module_name)
-            if hasattr(module, clip_model):
-                model_cls = getattr(module, clip_model)
-                model = model_cls(**model_cfg)
+        model_cls = None
+        for _module in (_model_worldwide, model_zoo):
+            if hasattr(_module, clip_model):
+                model_cls = getattr(_module, clip_model)
                 break
-        else:
-            raise ValueError(f"{clip_model} not found with *model.py")
+        if model_cls is None:
+            raise ValueError(f"{clip_model} not found in vendored mini_clip modules")
+        model = model_cls(**model_cfg)
 
         if pretrained:
             checkpoint_path = ''

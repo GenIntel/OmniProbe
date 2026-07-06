@@ -172,7 +172,8 @@ class QwenVLVisualBackbone(nn.Module):
             raise AttributeError("Unable to infer Qwen visual hidden size.")
         self.hidden_size = int(hidden_size)
         self.feat_dim = self.hidden_size
-        self.patch_size = int(getattr(self.visual, "patch_size", getattr(self.visual.config, "patch_size", 14)))
+        raw_patch_size = int(getattr(self.visual, "patch_size", getattr(self.visual.config, "patch_size", 14)))
+        self.patch_size = raw_patch_size * self.spatial_merge
         self.layer = "last"
 
     def _prepare_inputs(self, images):
