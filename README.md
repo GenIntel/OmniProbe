@@ -16,6 +16,7 @@ OmniProbe gives 25+ families of visual foundation models a *single* command-line
   - [Backbones](#backbones)
 - [Usage](#usage)
   - [Command line](#command-line)
+  - [3D detection (Omni3D)](#3d-detection-omni3d)
   - [Python API](#python-api)
   - [Configs](#configs)
 - [Datasets \& paths](#datasets--paths)
@@ -56,6 +57,7 @@ Some backbones need extra dependencies — install only what you use:
 | `diffusion` | DIFT / Stable Diffusion backbone (`diffusers`) |
 | `xformers` | memory-efficient attention |
 | `knn` | faiss for ImageNet kNN eval |
+| `detection3d` | Omni3D 3D detection task (also needs detectron2 + pytorch3d, see below) |
 | `data-processing` | dataset preprocessing helpers |
 | `dev` | pytest + pre-commit |
 | `all` | `clip,sam,diffusion,xformers,data-processing` |
@@ -64,6 +66,16 @@ Some backbones need extra dependencies — install only what you use:
 uv sync --extra clip          # one extra
 uv sync --extra all           # everything above
 ```
+
+The 3D detection task additionally requires [detectron2](https://github.com/facebookresearch/detectron2) and [PyTorch3D](https://github.com/facebookresearch/pytorch3d), which have no PyPI wheels for recent PyTorch and must be built from source against your installed torch/CUDA (they are therefore not part of any extra):
+
+```bash
+pip install "git+https://github.com/facebookresearch/detectron2.git" --no-build-isolation
+pip install "git+https://github.com/facebookresearch/pytorch3d.git" --no-build-isolation
+pip install -e ".[detection3d]"
+```
+
+Build requirements: `CUDA_HOME` must point to a CUDA toolkit whose major version matches your torch build (e.g. CUDA 12.x for `torch+cu12x`), with a host compiler nvcc accepts (GCC ≤ 13 for CUDA 12). On a machine without a GPU, set `TORCH_CUDA_ARCH_LIST` (e.g. `"8.0;9.0"` for A100/H100) so the extensions are compiled for the GPUs you will run on.
 
 <details>
 <summary>pip fallback</summary>
@@ -122,6 +134,7 @@ omniprobe --list-backbones
 | Surface normals | NYU, NAVI |
 | Segmentation | ADE20K |
 | Pose | ImageNet3D |
+| 3D detection | Omni3D (ARKitScenes default; indoor/outdoor/full presets) |
 | Tracking | TAP-Vid DAVIS |
 | Classification | ImageNet |
 
@@ -179,6 +192,46 @@ python -m omniprobe.run task=segmentation_ade20k backbone=dinov2_b14
 python -m omniprobe.run task=classification_imagenet_knn    backbone=dinov2_b14 task.data_root=/path/to/imagenet
 python -m omniprobe.run task=classification_imagenet_linear backbone=dinov2_b14 task.data_root=/path/to/imagenet
 ```
+
+### 3D detection (Omni3D)
+
+The 3D detection task trains Cube R-CNN heads on top of a frozen backbone and reports AP2D/AP3D. It needs two things the other tasks don't:
+
+1. **Extra dependencies** — detectron2 and PyTorch3D built from source plus the `detection3d` extra; see the install commands in [Installation](#installation).
+2. **The Omni3D data** — annotations and ARKitScenes images under `OMNI3D_ROOT`; see [data_processing/README.md](./data_processing/README.md#omni3d-3d-detection) for the download and layout.
+
+Training and evaluation on ARKitScenes (the default):
+
+```bash
+# full training run (ARKitScenes, frozen backbone, 116k iterations)
+python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14
+
+# multi-GPU: single node, N processes; solver.ims_per_batch is the TOTAL
+# batch size across GPUs (default: num_gpus=4, ims_per_batch=32)
+python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
+  task.system.num_gpus=4
+
+# evaluate a trained checkpoint (no training); visualize_predictions
+# additionally renders 3D cuboid overlays + BEV for every 50th test image
+# into <run_dir>/inference/iter_final/<dataset>/vis/
+python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
+  task.eval_only=true task.weights=/path/to/model_final.pth \
+  task.visualize_predictions=true
+
+# resume an interrupted run: reuse its output directory
+python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
+  task.resume=true hydra.run.dir=outputs/<date>/<time>_detection3d_omni3d_dinov2_b14
+```
+
+**Other Omni3D datasets.** Preset tasks cover the standard splits — `detection3d_omni3d_in` (SUN RGB-D + Hypersim + ARKitScenes, 38 categories), `detection3d_omni3d_out` (nuScenes + KITTI, 11), and `detection3d_omni3d_full` (all six, 50); run them exactly like the default task once the corresponding datasets are downloaded. For custom combinations, override the dataset lists and let the category set resolve from a preset name (`omni3d`, `omni3d_in`, `omni3d_out`, or any split name):
+
+```bash
+python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
+  'task.datasets.train=[KITTI_train,KITTI_val]' 'task.datasets.test=[KITTI_test]' \
+  task.datasets.category_names=KITTI_test task.datasets.num_classes=null
+```
+
+When evaluating a checkpoint, keep `category_names`/`num_classes` matching the training run — the detection heads are sized for those categories. The default solver follows the frozen-backbone ARKitScenes recipe (AdamW 1e-3, batch 32, 116k iterations); the upstream Cube R-CNN recipe used larger batches for the bigger splits (128 indoor, 192 full), so expect to tune batch/lr/iterations there.
 
 ### Python API
 
@@ -283,3 +336,5 @@ If you use OmniProbe in your research, please consider giving a star ⭐ and cit
 OmniProbe is released under the [MIT License](./LICENSE).
 
 This project builds on several open-source works; see [docs/THIRD_PARTY_LICENSES.md](./docs/THIRD_PARTY_LICENSES.md) for full attribution and their licenses. We especially thank [Probing the 3D Awareness of Visual Foundation Models](https://arxiv.org/abs/2404.08636) (CVPR 2024), whose implementation this framework heavily builds upon.
+
+Note that some vendored components carry more restrictive licenses than MIT — in particular the Cube R-CNN code used by the 3D detection task (`omniprobe/models/vendor/cubercnn/`) is CC BY-NC 4.0 (**non-commercial**), and MetaCLIP/I-JEPA/PIXIO carry non-commercial terms as well. These subtrees are only imported when you use the corresponding backbones or tasks.

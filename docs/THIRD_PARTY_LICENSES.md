@@ -120,3 +120,22 @@ referenced file rather than reproduced here.
 - **License**: CC BY-NC 4.0 (see `omniprobe/models/vendor/metaclip/LICENSE`)
 - **Files**: `src/mini_clip/` (11 files), `src/training/checkpoint.py`
 - **Modifications**: Relative imports (`from src.mini_clip.X` → `from .X`)
+
+### Omni3D / Cube R-CNN
+
+- **Source**: https://github.com/facebookresearch/omni3d
+- **Copyright**: Meta Platforms, Inc. and affiliates
+- **License**: CC BY-NC 4.0 (see `omniprobe/models/vendor/cubercnn/LICENSE`,
+  which also covers the ARKitScenes and Objectron dataset licenses)
+- **Files**: `cubercnn/data/`, `cubercnn/evaluation/`, `cubercnn/modeling/`
+  (meta_arch, proposal_generator, roi_heads), `cubercnn/solver/`,
+  `cubercnn/util/`, `cubercnn/vis/`, `cubercnn/config.py`
+- **Used for**: The `detection3d_omni3d` task (Cube R-CNN detection heads,
+  Omni3D data pipeline, AP3D evaluation, and prediction visualization)
+- **Modifications**: Import paths rewritten to the vendored package;
+  training-time visualization, classic CNN backbones, and model-zoo modules
+  removed; registry-based model construction replaced by direct construction
+  with an OmniProbe backbone adapter; backbone-specific config keys removed
+- **Note**: This vendored subtree is licensed for **non-commercial use only**.
+  It is imported exclusively by the `detection3d_omni3d` task; the rest of
+  OmniProbe is unaffected.

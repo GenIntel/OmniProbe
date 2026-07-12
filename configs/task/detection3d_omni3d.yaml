@@ -1,0 +1,41 @@
+defaults:
+  - /probe: detection3d_dpt_fpn
+  - _self_
+
+name: detection3d_omni3d
+system:
+  random_seed: 8
+  num_gpus: 4
+  port: 12356
+dataset_root: ${oc.env:OMNI3D_ROOT,data/omni3d}
+datasets:
+  train: [ARKitScenes_train, ARKitScenes_val]
+  test: [ARKitScenes_test]
+  category_names:
+    [bed, table, chair, machine, cabinet, oven, shelves, sink, stove,
+     bathtub, toilet, sofa, television, refrigerator]
+  num_classes: 14
+solver:
+  type: adamw
+  base_lr: 0.001
+  ims_per_batch: 32          # total batch size across all GPUs
+  max_iter: 116000
+  steps: [69600, 92800]
+  warmup_iters: 5000
+  checkpoint_period: 5000
+  amp: false
+visualize_predictions: false  # render 3D cuboid predictions during evaluation
+test:
+  eval_period: 29000         # 0 disables intermediate evaluation
+freeze_backbone: true
+pixel_norm: cubercnn         # cubercnn | backbone
+stabilize: 0.02              # divergence tolerance; 0 disables retry machinery
+max_attempts: 10
+eval_only: false
+resume: false
+weights: ""                  # checkpoint path for eval_only or fine-tuning
+d2_overrides: []             # raw detectron2 "KEY value" pairs (escape hatch)
+runner:
+  module: omniprobe.scripts.train_detection3d_omni3d
+  required_output: dense
+  require_multilayer: true

@@ -1,0 +1,82 @@
+# Base detectron2 config for the Cube R-CNN 3D detection task.
+# Flattened from the omni3d configs (Base.yaml + the common overrides used in
+# the SSL-backbone experiments). Dataset names, categories, and solver values
+# are applied on top from the OmniProbe Hydra task config.
+INPUT:
+  FORMAT: RGB
+  MIN_SIZE_TRAIN: (256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512, 528, 544, 560, 576, 592, 608, 624, 640,)
+  MIN_SIZE_TEST: 512
+  MAX_SIZE_TRAIN: 1024
+  MAX_SIZE_TEST: 1024
+TEST:
+  VISIBILITY_THRES: 0.33333333
+  TRUNCATION_THRES: 0.33333333
+DATASETS:
+  IGNORE_NAMES: "['dontcare', 'ignore', 'void']"
+  MIN_HEIGHT_THRES: 0.05
+  TRUNCATION_THRES: 0.75
+  VISIBILITY_THRES: 0.25
+  TRUNC_2D_BOXES: True
+VIS_PERIOD: 0
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.1
+SOLVER:
+  WEIGHT_DECAY: 0.0001
+  LR_SCHEDULER_NAME: "WarmupMultiStepLR"
+MODEL:
+  # Deliberate quirk kept for parity with the reference Cube R-CNN
+  # SSL-backbone runs: these are caffe BGR-ordered statistics applied to RGB
+  # input (INPUT.FORMAT above). "Fixing" the channel order would invalidate
+  # comparability with all existing results. Use the task's
+  # pixel_norm: backbone option for properly ordered normalization instead.
+  PIXEL_MEAN: [103.530, 116.280, 123.675]
+  PIXEL_STD: [57.375, 57.120, 58.395]
+  META_ARCHITECTURE: "RCNN3D"
+  MASK_ON: False
+  STABILIZE: 0.02
+  USE_BN: True
+  FPN:
+    IN_FEATURES: ['p2', 'p3', 'p4', 'p5']
+  ANCHOR_GENERATOR:
+    SIZES: [[32], [64], [128], [256]]  # One size for each in feature map
+    ASPECT_RATIOS: [[0.5, 1.0, 2.0]]
+  RPN:
+    HEAD_NAME: "StandardRPNHead"
+    IN_FEATURES: ['p2', 'p3', 'p4', 'p5']
+    PRE_NMS_TOPK_TRAIN: 2000  # Per FPN level
+    PRE_NMS_TOPK_TEST: 1000  # Per FPN level
+    POST_NMS_TOPK_TRAIN: 1000
+    POST_NMS_TOPK_TEST: 1000
+    BOUNDARY_THRESH: -1
+    OBJECTNESS_UNCERTAINTY: "IoUness"
+    IOU_THRESHOLDS: [0.05, 0.05]
+    POSITIVE_FRACTION: 1.0
+  PROPOSAL_GENERATOR:
+    NAME: "RPNWithIgnore"
+  ROI_HEADS:
+    NAME: "ROIHeads3D"
+    IN_FEATURES: ["p2", "p3", "p4", "p5"]
+    BATCH_SIZE_PER_IMAGE: 512
+    SCORE_THRESH_TEST: 0.01
+  ROI_BOX_HEAD:
+    NAME: "FastRCNNConvFCHead"
+    NUM_FC: 2
+    POOLER_RESOLUTION: 7
+  ROI_CUBE_HEAD:
+    NAME: 'CubeHead'
+    Z_TYPE: 'direct'
+    POSE_TYPE: '6d'
+    NUM_FC: 2
+    SHARED_FC: True
+    USE_CONFIDENCE: 1.0
+    LOSS_W_3D: 1.0
+    POOLER_TYPE: 'ROIAlignV2'
+    POOLER_RESOLUTION: 7
+    DIMS_PRIORS_ENABLED: True
+    DISENTANGLED_LOSS: True
+    ALLOCENTRIC_POSE: True
+    VIRTUAL_FOCAL: 512.0
+    VIRTUAL_DEPTH: True
+    CHAMFER_POSE: True
+VERSION: 2

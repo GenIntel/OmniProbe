@@ -354,3 +354,61 @@ class MultiscaleHead(nn.Module):
         feats = self.conv_mid(feats).relu()
         feats = interpolate(feats, scale_factor=4, mode="bilinear")
         return self.conv_out(feats)
+
+
+class DPT_FPN(nn.Module):
+    """Feature pyramid head for detection probing.
+
+    Takes four dense feature maps at the backbone's patch stride and emits an
+    FPN-style pyramid {p2, p3, p4, p5} with nominal strides 4/8/16/32 for
+    consumption by detectron2-style detection heads. Adapted from the Cube
+    R-CNN SSL-backbone experiments.
+    """
+
+    def __init__(self, input_dims, output_dim, hidden_dim=512):
+        super().__init__()
+        assert len(input_dims) == 4
+        self.output_dim = output_dim
+        self.name = f"dpt_fpn_h{hidden_dim}"
+
+        self.conv_1x1 = nn.ModuleList(
+            [nn.Conv2d(input_dims[i], hidden_dim, kernel_size=1) for i in range(4)]
+        )
+
+        # per-level refinement: x4 and x2 upsampling, identity, x2 downsampling
+        self.ref_0 = nn.Sequential(
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=1),
+            nn.ConvTranspose2d(hidden_dim, hidden_dim, kernel_size=4, stride=4),
+        )
+        self.ref_1 = nn.Sequential(
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=1),
+            nn.ConvTranspose2d(hidden_dim, hidden_dim, kernel_size=2, stride=2),
+        )
+        self.ref_2 = nn.Sequential(
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=1),
+        )
+        self.ref_3 = nn.Sequential(
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=1),
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=2, padding=1),
+        )
+
+        self.out_convs = nn.ModuleList(
+            [nn.Conv2d(hidden_dim, output_dim, kernel_size=3, padding=1) for _ in range(4)]
+        )
+
+    def forward(self, feats):
+        assert len(feats) == 4
+
+        feats = [conv(feat) for conv, feat in zip(self.conv_1x1, feats)]
+
+        p5 = self.ref_3(feats[3])
+        p4 = self.ref_2(feats[2]) + interpolate(p5, scale_factor=2.0, mode="nearest")
+        p3 = self.ref_1(feats[1]) + interpolate(p4, scale_factor=2.0, mode="nearest")
+        p2 = self.ref_0(feats[0]) + interpolate(p3, scale_factor=2.0, mode="nearest")
+
+        return {
+            "p2": self.out_convs[0](p2),
+            "p3": self.out_convs[1](p3),
+            "p4": self.out_convs[2](p4),
+            "p5": self.out_convs[3](p5),
+        }
