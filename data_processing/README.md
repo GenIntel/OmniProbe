@@ -14,6 +14,7 @@ Each evaluation task expects a dataset root directory configured via an environm
 | `TAPVID_DAVIS_ROOT` | tracking_tapvid | [TAP-Vid DAVIS](#tap-vid-davis) |
 | `AP10K_ROOT` | correspondence_ap10k | [AP-10K](#ap-10k) |
 | `SOCO_ROOT` | correspondence_soco | [SOCO](#soco) |
+| `OMNI3D_ROOT` | detection3d_omni3d (+ `_in`, `_out`, `_full`) | [Omni3D](#omni3d-3d-detection) |
 
 
 ## NAVI
@@ -219,3 +220,40 @@ Set `SOCO_ROOT` to the downloaded `SOCOv1/` directory.
 
 The `pair_subdir` config parameter selects which pair annotations to use (default: `PairAnnotations/intra`).
 For linear probe training, `train_pair_subdir` and `test_pair_subdir` select the predefined splits.
+
+
+## Omni3D (3D detection)
+
+[Omni3D](https://github.com/facebookresearch/omni3d) is a 3D object detection benchmark unifying six datasets. The 3D detection tasks come in four flavors:
+
+| Task | Datasets | Categories |
+|------|----------|------------|
+| `detection3d_omni3d` | ARKitScenes | 14 |
+| `detection3d_omni3d_in` | SUN RGB-D, Hypersim, ARKitScenes | 38 |
+| `detection3d_omni3d_out` | nuScenes, KITTI | 11 |
+| `detection3d_omni3d_full` | all six (adds Objectron) | 50 |
+
+Download the Omni3D annotation JSONs (including `stats.json`) and the images of the datasets you need, following the [official data instructions](https://github.com/facebookresearch/omni3d/blob/main/DATA.md) — annotations come from the Omni3D release; images come from each dataset's own distribution (KITTI, nuScenes, and SUN RGB-D from their official sites, ARKitScenes/Objectron/Hypersim via the scripts linked in DATA.md).
+
+Expected structure (only the datasets you run are needed):
+```
+omni3d/
+  Omni3D/                    # annotation JSONs from the Omni3D release
+    ARKitScenes_{train,val,test}.json
+    SUNRGBD_{train,val,test}.json
+    Hypersim_{train,val,test}.json
+    Objectron_{train,val,test}.json
+    KITTI_{train,val,test}.json
+    nuScenes_{train,val,test}.json
+    stats.json
+  ARKitScenes/...            # images, referenced by file_path in the JSONs
+  SUNRGBD/...
+  hypersim/...
+  objectron/...
+  KITTI_object/...
+  nuScenes/...
+```
+
+Set `OMNI3D_ROOT` to the `omni3d/` directory. Only ARKitScenes is needed for the default `detection3d_omni3d` task.
+
+For how to run the 3D detection tasks (including extra dependencies, multi-GPU, and other datasets), see the [3D detection section in the main README](../README.md#3d-detection-omni3d).

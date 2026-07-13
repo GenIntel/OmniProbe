@@ -179,6 +179,8 @@ Correspondence scripts should use `resolve_correspondence_image_size` from `omni
 
 **Native tasks** (no script delegation) implement `run(cfg, context)` in their module and are registered in `_NATIVE_TASK_MODULES` (e.g. `classification_imagenet_knn`).
 
+**The detectron2 exception.** `detection3d_omni3d` is script-backed like the rest, but internally drives the vendored Cube R-CNN stack (`omniprobe/models/vendor/cubercnn/`): the Hydra task config is bridged into a detectron2 `CfgNode` (`build_d2_cfg`), datasets are registered in detectron2's `DatasetCatalog` instead of going through `build_loader`, and multi-GPU runs use `detectron2.engine.launch`. The backbone still comes from the standard Hydra config — any dense multilayer backbone works via `OmniProbeD2Backbone` (`omniprobe/models/detectron2_backbone.py`). To resume a run, reuse its directory: `python -m omniprobe.run task=detection3d_omni3d ... task.resume=true hydra.run.dir=<previous run dir>`.
+
 ---
 
 ## Datasets

@@ -45,6 +45,9 @@ sam = ["segment-anything>=1.0"]
 diffusion = ["diffusers>=0.30"]
 xformers = ["xformers>=0.0.25"]
 knn = ["faiss-cpu>=1.8"]
+# 3D detection also needs detectron2 and pytorch3d, which must be installed
+# separately from source (see the 3D detection notes in the README)
+detection3d = ["pycocotools>=2.0", "tabulate>=0.9", "pandas>=2.0", "fvcore>=0.1.5"]
 data-processing = ["joblib>=1.4", "mat73>=0.62"]
 dev = ["pytest>=7.0", "pre-commit"]
 all = ["omniprobe[clip,sam,diffusion,xformers,data-processing]"]

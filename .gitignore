@@ -1,6 +1,6 @@
 # Project outputs
 outputs/
-data/
+/data/
 logs/
 results/
 viz/

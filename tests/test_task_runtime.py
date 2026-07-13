@@ -28,6 +28,7 @@ _SCRIPT_BACKENDS = [
     "eval_segmentation_ade20k",
     "eval_tracking_tapvid",
     "train_depth",
+    "train_detection3d_omni3d",
     "train_pose_imagenet3d",
     "train_segmentation_ade20k",
     "train_snorm",
