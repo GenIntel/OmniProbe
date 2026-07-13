@@ -6,8 +6,6 @@ Missing something you'd like to see? Open a pull request or raise an issue — s
 
 ## New tasks
 
-- 2D detection
-- 3D detection on the remaining Omni3D datasets (ARKitScenes is supported via `detection3d_omni3d`)
 - 3D reconstruction
 - video segmentation
 
