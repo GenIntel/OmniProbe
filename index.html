@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniProbe: Vision Foundation Model Evaluation Results</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #fafbfc;
+  color: #1a1a2e;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 2rem 2rem 1.5rem;
+  margin-bottom: 0;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.25rem;
+}
+
+.header .subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.controls {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.control-row:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 80px;
+}
+
+.tab-group {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.tab-btn.active {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.model-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-btn:hover {
+  background: #e2e8f0;
+}
+
+.preset-btn.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.model-chip {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.72rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.model-chip:hover {
+  border-color: #94a3b8;
+}
+
+.model-chip.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.model-chip.is-main {
+  font-weight: 600;
+}
+
+.content {
+  padding: 1.5rem 2rem;
+}
+
+.task-info {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.task-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.task-meta {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+thead th {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+thead th:hover {
+  background: #f1f5f9;
+}
+
+thead th .sort-arrow {
+  margin-left: 0.3rem;
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+thead th.sorted-asc .sort-arrow::after { content: " \25B2"; color: #3b82f6; }
+thead th.sorted-desc .sort-arrow::after { content: " \25BC"; color: #3b82f6; }
+
+thead th .dir-hint {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+tbody tr:hover {
+  background: #fafbfe;
+}
+
+tbody tr.is-main-model {
+  background: #fefce8;
+}
+
+tbody tr.is-main-model:hover {
+  background: #fef9c3;
+}
+
+td {
+  padding: 0.5rem 0.9rem;
+  white-space: nowrap;
+}
+
+td.model-name {
+  font-weight: 500;
+  color: #1a1a2e;
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+}
+
+td.best-val {
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.no-data {
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+
+.footer {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .header, .controls, .content { padding-left: 1rem; padding-right: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>OmniProbe</h1>
+  <div class="subtitle">Vision Foundation Model Evaluation Results</div>
+</div>
+
+<div class="controls" id="controls">
+  <div class="control-row">
+    <span class="control-label">Group</span>
+    <div class="tab-group" id="group-tabs"></div>
+  </div>
+  <div class="control-row">
+    <span class="control-label">Task</span>
+    <div class="tab-group" id="task-tabs"></div>
+  </div>
+  <div class="control-row">
+    <span class="control-label">Models</span>
+    <div class="model-controls">
+      <button class="preset-btn" id="btn-main" onclick="selectMainModels()">Main paper (13)</button>
+      <button class="preset-btn" id="btn-all" onclick="selectAllModels()">Select all</button>
+      <button class="preset-btn" onclick="selectNone()">Clear</button>
+    </div>
+  </div>
+  <div class="control-row">
+    <span class="control-label"></span>
+    <div class="model-chips" id="model-chips"></div>
+  </div>
+</div>
+
+<div class="content" id="content">
+  <div class="no-data">Select a task to view results.</div>
+</div>
+
+<div class="footer">
+  OmniProbe Benchmark &mdash; Interactive Results Explorer
+</div>
+
+<script>
+const DATA = {"tasks": {"soco": {"display": "SOCO (Intra)", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"SAM-B": {"SOC (PCK)": 25.51, "CC (PCK)": 35.19}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 16.24, "CC (PCK)": 25.24}, "V-JEPA2.1-B": {"SOC (PCK)": 44.46, "CC (PCK)": 60.37}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 16.67, "CC (PCK)": 26.27}, "DINOv2-L/14": {"SOC (PCK)": 62.4, "CC (PCK)": 80.68}, "SigLIP-B/16": {"SOC (PCK)": 8.83, "CC (PCK)": 14.1}, "MAE-B/16": {"SOC (PCK)": 9.37, "CC (PCK)": 14.4}, "DUNE-B/14": {"SOC (PCK)": 43.96, "CC (PCK)": 57.71}, "DINO-B/16": {"SOC (PCK)": 30.59, "CC (PCK)": 43.79}, "iBOT-B/16": {"SOC (PCK)": 39.64, "CC (PCK)": 55.16}, "DINOv2-B/14": {"SOC (PCK)": 67.86, "CC (PCK)": 84.04}, "ConvNeXt-B (IN22K)": {"SOC (PCK)": 23.52, "CC (PCK)": 34.22}, "C-RADIO-v3-B": {"SOC (PCK)": 51.06, "CC (PCK)": 69.01}, "DeiT3-B/16": {"SOC (PCK)": 23.33, "CC (PCK)": 35.52}, "CroCov2-B/16": {"SOC (PCK)": 10.2, "CC (PCK)": 15.15}, "PIXIO-B/16": {"SOC (PCK)": 37.52, "CC (PCK)": 49.47}, "MetaCLIP2-B/16": {"SOC (PCK)": 20.2, "CC (PCK)": 31.22}, "DINOv3-B/16": {"SOC (PCK)": 55.52, "CC (PCK)": 69.72}, "PE-Spatial-B/16": {"SOC (PCK)": 45.86, "CC (PCK)": 63.25}, "DINOv2-S/14": {"SOC (PCK)": 56.67, "CC (PCK)": 73.99}, "ConvNeXt-B (OpenCLIP)": {"SOC (PCK)": 24.25, "CC (PCK)": 34.15}, "ConvNeXt-B (OpenCLIP-AR)": {"SOC (PCK)": 31.09, "CC (PCK)": 43.98}, "DINO-S/16": {"SOC (PCK)": 29.97, "CC (PCK)": 43.13}, "ConvNeXt-B (FCMAE)": {"SOC (PCK)": 34.57, "CC (PCK)": 49.57}, "DUNE-S/14": {"SOC (PCK)": 38.15, "CC (PCK)": 50.71}, "DINOv2-B/14-reg": {"SOC (PCK)": 58.03, "CC (PCK)": 76.31}, "DIY-SC (DINOv2-B/14)": {"SOC (PCK)": 69.17, "CC (PCK)": 78.88}, "DUNE-B/14 (336px)": {"SOC (PCK)": 42.5, "CC (PCK)": 56.12}, "DUNE-B/14 (448px)": {"SOC (PCK)": 46.68, "CC (PCK)": 61.16}, "iBOT-S/16": {"SOC (PCK)": 33.75, "CC (PCK)": 48.24}, "CLIP-B/16 (DataComp)": {"SOC (PCK)": 23.26, "CC (PCK)": 35.08}, "iBOT-B/16 (IN22K)": {"SOC (PCK)": 38.39, "CC (PCK)": 53.07}, "C-RADIO-v3-L": {"SOC (PCK)": 58.76, "CC (PCK)": 76.76}, "MiDaS-L/16": {"SOC (PCK)": 27.1, "CC (PCK)": 40.45}, "I-JEPA-H/16": {"SOC (PCK)": 46.31, "CC (PCK)": 60.5}, "DeiT3-L/16": {"SOC (PCK)": 32.56, "CC (PCK)": 47.5}, "C-RADIO-v4": {"SOC (PCK)": 61.5, "CC (PCK)": 79.56}, "CLIP-L/14 (OpenAI)": {"SOC (PCK)": 25.87, "CC (PCK)": 37.95}, "SAM-L": {"SOC (PCK)": 26.05, "CC (PCK)": 35.9}, "PIXIO-L/16": {"SOC (PCK)": 38.59, "CC (PCK)": 51.26}, "SigLIP-L/16": {"SOC (PCK)": 9.6, "CC (PCK)": 14.53}, "iBOT-L/16": {"SOC (PCK)": 47.43, "CC (PCK)": 64.14}, "iBOT-L/16 (IN22K)": {"SOC (PCK)": 49.39, "CC (PCK)": 66.55}, "V-JEPA2.1-L": {"SOC (PCK)": 53.21, "CC (PCK)": 69.69}, "CLIP-L/14 (DataComp)": {"SOC (PCK)": 32.06, "CC (PCK)": 46.49}, "V-JEPA2-L": {"SOC (PCK)": 31.24, "CC (PCK)": 42.47}, "CLIP-L/14 (LAION2B)": {"SOC (PCK)": 24.37, "CC (PCK)": 36.22}, "VGGT-1B": {"SOC (PCK)": 15.79, "CC (PCK)": 21.18}, "DINOv3-ConvNeXt-T": {"SOC (PCK)": 46.84, "CC (PCK)": 60.38}, "DINOv3-S/16": {"SOC (PCK)": 51.47, "CC (PCK)": 65.64}, "MetaCLIP2-S/16": {"SOC (PCK)": 15.82, "CC (PCK)": 24.9}, "DINOv3-ConvNeXt-S": {"SOC (PCK)": 47.91, "CC (PCK)": 61.03}, "DINOv3-S+/16": {"SOC (PCK)": 55.2, "CC (PCK)": 69.28}, "DINOv3-ConvNeXt-B": {"SOC (PCK)": 47.58, "CC (PCK)": 60.92}, "DINOv3-ConvNeXt-L": {"SOC (PCK)": 48.85, "CC (PCK)": 62.86}, "DINOv3-L/16 (SAT)": {"SOC (PCK)": 21.11, "CC (PCK)": 29.45}, "MAE-L/16": {"SOC (PCK)": 8.8, "CC (PCK)": 13.65}, "MetaCLIP2-L/14": {"SOC (PCK)": 25.89, "CC (PCK)": 38.66}, "Qwen2.5-VL-7B": {"SOC (PCK)": 26.04, "CC (PCK)": 36.77}, "SD 2.1": {"SOC (PCK)": 49.05, "CC (PCK)": 60.55}, "DINOv3-L/16": {"SOC (PCK)": 61.36, "CC (PCK)": 76.56}}, "group": "soco_correspondence"}, "soco_cross": {"display": "SOCO (Cross)", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"V-JEPA2.1-B": {"SOC (PCK)": 38.56, "CC (PCK)": 53.8}, "CroCov2-B/16": {"SOC (PCK)": 7.82, "CC (PCK)": 12.13}, "ConvNeXt-B (IN22K)": {"SOC (PCK)": 10.37, "CC (PCK)": 16.0}, "SAM-B": {"SOC (PCK)": 20.4, "CC (PCK)": 29.22}, "SigLIP-B/16": {"SOC (PCK)": 7.0, "CC (PCK)": 11.49}, "PIXIO-B/16": {"SOC (PCK)": 32.93, "CC (PCK)": 43.6}, "MetaCLIP2-B/16": {"SOC (PCK)": 15.41, "CC (PCK)": 24.13}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 11.73, "CC (PCK)": 19.2}, "C-RADIO-v3-B": {"SOC (PCK)": 46.33, "CC (PCK)": 64.38}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 11.43, "CC (PCK)": 18.46}, "DeiT3-B/16": {"SOC (PCK)": 12.12, "CC (PCK)": 19.76}, "DINOv3-B/16": {"SOC (PCK)": 49.43, "CC (PCK)": 62.38}, "PE-Spatial-B/16": {"SOC (PCK)": 40.85, "CC (PCK)": 57.66}, "iBOT-B/16": {"SOC (PCK)": 34.09, "CC (PCK)": 48.34}, "DINO-B/16": {"SOC (PCK)": 23.95, "CC (PCK)": 35.41}, "MAE-B/16": {"SOC (PCK)": 7.15, "CC (PCK)": 11.35}, "DINOv2-L/14": {"SOC (PCK)": 56.94, "CC (PCK)": 74.49}, "DUNE-B/14": {"SOC (PCK)": 37.02, "CC (PCK)": 49.64}, "DINOv2-B/14": {"SOC (PCK)": 54.98, "CC (PCK)": 72.93}, "I-JEPA-H/16": {"SOC (PCK)": 38.36, "CC (PCK)": 50.6}, "MiDaS-L/16": {"SOC (PCK)": 21.37, "CC (PCK)": 33.46}, "VGGT-1B": {"SOC (PCK)": 12.33, "CC (PCK)": 16.86}, "SD 2.1": {"SOC (PCK)": 42.73, "CC (PCK)": 53.71}, "DINOv3-L/16": {"SOC (PCK)": 56.15, "CC (PCK)": 70.08}}, "group": "soco_correspondence"}, "soco_fixed60": {"display": "SOCO Fixed-60", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"ConvNeXt-B (IN22K)": {"SOC (PCK)": 23.36, "CC (PCK)": 34.36}, "CroCov2-B/16": {"SOC (PCK)": 9.12, "CC (PCK)": 14.06}, "V-JEPA2.1-B": {"SOC (PCK)": 44.43, "CC (PCK)": 60.44}, "DINOv2-B/14": {"SOC (PCK)": 60.6, "CC (PCK)": 78.87}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 14.09, "CC (PCK)": 22.42}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 14.85, "CC (PCK)": 23.16}, "DUNE-B/14": {"SOC (PCK)": 44.67, "CC (PCK)": 58.49}, "SigLIP-B/16": {"SOC (PCK)": 8.7, "CC (PCK)": 13.95}, "DINOv3-B/16": {"SOC (PCK)": 56.36, "CC (PCK)": 70.52}, "C-RADIO-v3-B": {"SOC (PCK)": 52.26, "CC (PCK)": 70.59}, "MetaCLIP2-B/16": {"SOC (PCK)": 17.71, "CC (PCK)": 27.29}, "PIXIO-B/16": {"SOC (PCK)": 33.18, "CC (PCK)": 44.3}, "SAM-B": {"SOC (PCK)": 25.75, "CC (PCK)": 35.51}, "PE-Spatial-B/16": {"SOC (PCK)": 43.99, "CC (PCK)": 61.19}, "MAE-B/16": {"SOC (PCK)": 9.27, "CC (PCK)": 14.2}, "DINOv2-L/14": {"SOC (PCK)": 62.45, "CC (PCK)": 80.67}, "DeiT3-B/16": {"SOC (PCK)": 22.48, "CC (PCK)": 34.27}, "DINO-B/16": {"SOC (PCK)": 29.3, "CC (PCK)": 41.98}, "iBOT-B/16": {"SOC (PCK)": 38.09, "CC (PCK)": 53.11}, "MiDaS-L/16": {"SOC (PCK)": 25.7, "CC (PCK)": 38.73}, "I-JEPA-H/16": {"SOC (PCK)": 47.17, "CC (PCK)": 61.61}, "VGGT-1B": {"SOC (PCK)": 15.8, "CC (PCK)": 21.08}, "SD 2.1": {"SOC (PCK)": 48.76, "CC (PCK)": 60.6}, "DINOv3-L/16": {"SOC (PCK)": 62.61, "CC (PCK)": 77.94}}, "group": "soco_correspondence"}, "soco_cross_fixed60": {"display": "SOCO Cross Fixed-60", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"ConvNeXt-B (IN22K)": {"SOC (PCK)": 10.91, "CC (PCK)": 17.04}, "CroCov2-B/16": {"SOC (PCK)": 7.21, "CC (PCK)": 11.5}, "V-JEPA2.1-B": {"SOC (PCK)": 38.61, "CC (PCK)": 53.66}, "DINOv2-L/14": {"SOC (PCK)": 56.84, "CC (PCK)": 74.09}, "DINOv2-B/14": {"SOC (PCK)": 55.06, "CC (PCK)": 72.74}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 10.38, "CC (PCK)": 17.02}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 9.93, "CC (PCK)": 16.45}, "DINOv3-B/16": {"SOC (PCK)": 50.22, "CC (PCK)": 63.19}, "SigLIP-B/16": {"SOC (PCK)": 7.04, "CC (PCK)": 11.42}, "SAM-B": {"SOC (PCK)": 20.65, "CC (PCK)": 29.42}, "MetaCLIP2-B/16": {"SOC (PCK)": 13.19, "CC (PCK)": 21.02}, "C-RADIO-v3-B": {"SOC (PCK)": 47.22, "CC (PCK)": 65.37}, "MAE-B/16": {"SOC (PCK)": 7.34, "CC (PCK)": 11.54}, "DUNE-B/14": {"SOC (PCK)": 37.94, "CC (PCK)": 50.54}, "PIXIO-B/16": {"SOC (PCK)": 28.87, "CC (PCK)": 38.61}, "DeiT3-B/16": {"SOC (PCK)": 11.88, "CC (PCK)": 19.43}, "DINO-B/16": {"SOC (PCK)": 22.77, "CC (PCK)": 33.56}, "PE-Spatial-B/16": {"SOC (PCK)": 38.88, "CC (PCK)": 55.56}, "iBOT-B/16": {"SOC (PCK)": 32.56, "CC (PCK)": 46.38}, "MiDaS-L/16": {"SOC (PCK)": 20.47, "CC (PCK)": 32.16}, "I-JEPA-H/16": {"SOC (PCK)": 39.05, "CC (PCK)": 51.31}, "VGGT-1B": {"SOC (PCK)": 12.16, "CC (PCK)": 16.84}, "SD 2.1": {"SOC (PCK)": 42.43, "CC (PCK)": 53.83}, "DINOv3-L/16": {"SOC (PCK)": 57.54, "CC (PCK)": 71.38}}, "group": "soco_correspondence"}, "soco_soft": {"display": "SOCO Soft-Eval", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"V-JEPA2.1-B": {"SOC (PCK)": 45.79, "CC (PCK)": 60.44}, "C-RADIO-v3-B": {"SOC (PCK)": 52.4, "CC (PCK)": 68.24}, "SigLIP-B/16": {"SOC (PCK)": 8.81, "CC (PCK)": 13.93}, "SAM-B": {"SOC (PCK)": 25.52, "CC (PCK)": 34.89}, "MAE-B/16": {"SOC (PCK)": 9.08, "CC (PCK)": 13.97}, "DeiT3-B/16": {"SOC (PCK)": 22.01, "CC (PCK)": 33.12}, "iBOT-B/16": {"SOC (PCK)": 41.4, "CC (PCK)": 55.89}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 16.99, "CC (PCK)": 25.67}, "MetaCLIP2-B/16": {"SOC (PCK)": 21.28, "CC (PCK)": 31.74}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 17.87, "CC (PCK)": 27.29}, "DINOv3-B/16": {"SOC (PCK)": 55.75, "CC (PCK)": 68.65}, "DINO-B/16": {"SOC (PCK)": 32.29, "CC (PCK)": 44.75}, "ConvNeXt-B (IN22K)": {"SOC (PCK)": 23.61, "CC (PCK)": 33.73}, "DINOv2-L/14": {"SOC (PCK)": 64.38, "CC (PCK)": 81.3}, "DINOv2-B/14": {"SOC (PCK)": 62.71, "CC (PCK)": 79.71}, "PE-Spatial-B/16": {"SOC (PCK)": 47.77, "CC (PCK)": 63.74}, "CroCov2-B/16": {"SOC (PCK)": 10.16, "CC (PCK)": 14.97}, "PIXIO-B/16": {"SOC (PCK)": 35.67, "CC (PCK)": 46.37}, "Qwen2.5-VL-7B": {"SOC (PCK)": 26.32, "CC (PCK)": 36.42}, "I-JEPA-H/16": {"SOC (PCK)": 47.73, "CC (PCK)": 61.48}, "DUNE-B/14": {"SOC (PCK)": 44.2, "CC (PCK)": 56.89}, "MiDaS-L/16": {"SOC (PCK)": 28.18, "CC (PCK)": 41.0}, "VGGT-1B": {"SOC (PCK)": 15.62, "CC (PCK)": 21.04}, "DINOv3-ConvNeXt-T": {"SOC (PCK)": 47.63, "CC (PCK)": 60.52}, "DINOv3-S/16": {"SOC (PCK)": 51.93, "CC (PCK)": 64.81}, "DINOv3-ConvNeXt-S": {"SOC (PCK)": 47.64, "CC (PCK)": 59.93}, "DINOv3-S+/16": {"SOC (PCK)": 55.42, "CC (PCK)": 68.18}, "DINOv2-S/14": {"SOC (PCK)": 58.93, "CC (PCK)": 74.76}, "ConvNeXt-B (OpenCLIP)": {"SOC (PCK)": 25.1, "CC (PCK)": 34.83}, "ConvNeXt-B (OpenCLIP-AR)": {"SOC (PCK)": 32.13, "CC (PCK)": 44.44}, "DINO-S/16": {"SOC (PCK)": 31.58, "CC (PCK)": 44.32}, "DINOv3-ConvNeXt-B": {"SOC (PCK)": 47.25, "CC (PCK)": 59.69}, "ConvNeXt-B (FCMAE)": {"SOC (PCK)": 34.25, "CC (PCK)": 47.73}, "CLIP-B/16 (DataComp)": {"SOC (PCK)": 24.82, "CC (PCK)": 36.11}, "DUNE-S/14": {"SOC (PCK)": 40.23, "CC (PCK)": 52.31}, "MetaCLIP2-S/16": {"SOC (PCK)": 16.77, "CC (PCK)": 25.64}, "CLIP-L/14 (DataComp)": {"SOC (PCK)": 34.87, "CC (PCK)": 48.58}, "CLIP-L/14 (OpenAI)": {"SOC (PCK)": 27.53, "CC (PCK)": 39.45}, "DINOv2-B/14-reg": {"SOC (PCK)": 60.32, "CC (PCK)": 76.63}, "iBOT-S/16": {"SOC (PCK)": 35.88, "CC (PCK)": 49.89}, "CLIP-L/14 (LAION2B)": {"SOC (PCK)": 26.81, "CC (PCK)": 38.67}, "DUNE-B/14 (336px)": {"SOC (PCK)": 44.1, "CC (PCK)": 56.95}, "DUNE-B/14 (448px)": {"SOC (PCK)": 48.04, "CC (PCK)": 61.52}, "DIY-SC (DINOv2-B/14)": {"SOC (PCK)": 71.39, "CC (PCK)": 79.83}, "DINOv3-ConvNeXt-L": {"SOC (PCK)": 48.22, "CC (PCK)": 61.2}, "C-RADIO-v3-L": {"SOC (PCK)": 60.19, "CC (PCK)": 75.7}, "SigLIP-L/16": {"SOC (PCK)": 9.86, "CC (PCK)": 14.78}, "PIXIO-L/16": {"SOC (PCK)": 35.05, "CC (PCK)": 46.33}, "SAM-L": {"SOC (PCK)": 25.72, "CC (PCK)": 35.01}, "DINOv3-L/16 (SAT)": {"SOC (PCK)": 21.61, "CC (PCK)": 29.34}, "iBOT-B/16 (IN22K)": {"SOC (PCK)": 37.47, "CC (PCK)": 50.75}, "C-RADIO-v4": {"SOC (PCK)": 63.34, "CC (PCK)": 79.55}, "DeiT3-L/16": {"SOC (PCK)": 31.39, "CC (PCK)": 44.78}, "MetaCLIP2-L/14": {"SOC (PCK)": 28.22, "CC (PCK)": 40.55}, "V-JEPA2.1-L": {"SOC (PCK)": 55.6, "CC (PCK)": 71.16}, "iBOT-L/16 (IN22K)": {"SOC (PCK)": 51.1, "CC (PCK)": 67.0}, "MAE-L/16": {"SOC (PCK)": 8.46, "CC (PCK)": 13.12}, "iBOT-L/16": {"SOC (PCK)": 49.63, "CC (PCK)": 65.36}, "V-JEPA2-L": {"SOC (PCK)": 32.73, "CC (PCK)": 43.53}, "SD 2.1": {"SOC (PCK)": 49.87, "CC (PCK)": 61.2}, "DINOv3-L/16": {"SOC (PCK)": 61.79, "CC (PCK)": 75.66}}, "group": "soco_correspondence"}, "soco_lp": {"display": "SOCO Linear Probe", "metrics_meta": {"SOC (PCK)": {"higher_better": true}, "CC (PCK)": {"higher_better": true}}, "results": {"V-JEPA2.1-B": {"SOC (PCK)": 57.15, "CC (PCK)": 70.88}, "CLIP-B/16 (OpenAI)": {"SOC (PCK)": 35.14, "CC (PCK)": 51.32}, "CLIP-B/16 (LAION2B)": {"SOC (PCK)": 35.43, "CC (PCK)": 52.08}, "MetaCLIP2-B/16": {"SOC (PCK)": 35.08, "CC (PCK)": 51.33}, "DINOv3-B/16": {"SOC (PCK)": 69.16, "CC (PCK)": 78.56}, "DINO-B/16": {"SOC (PCK)": 42.18, "CC (PCK)": 58.07}, "DINOv2-B/14": {"SOC (PCK)": 69.84, "CC (PCK)": 81.36}, "DINOv2-L/14": {"SOC (PCK)": 71.52, "CC (PCK)": 83.44}, "SigLIP-B/16": {"SOC (PCK)": 24.85, "CC (PCK)": 36.2}, "iBOT-B/16": {"SOC (PCK)": 50.72, "CC (PCK)": 66.81}, "C-RADIO-v3-B": {"SOC (PCK)": 62.1, "CC (PCK)": 75.31}, "MAE-B/16": {"SOC (PCK)": 29.93, "CC (PCK)": 39.88}, "ConvNeXt-B (IN22K)": {"SOC (PCK)": 45.52, "CC (PCK)": 62.95}, "DUNE-B/14": {"SOC (PCK)": 58.1, "CC (PCK)": 70.61}, "I-JEPA-H/16": {"SOC (PCK)": 61.65, "CC (PCK)": 74.77}, "PE-Spatial-B/16": {"SOC (PCK)": 55.34, "CC (PCK)": 71.76}, "PIXIO-B/16": {"SOC (PCK)": 63.29, "CC (PCK)": 70.77}, "CroCov2-B/16": {"SOC (PCK)": 29.05, "CC (PCK)": 39.81}, "MiDaS-L/16": {"SOC (PCK)": 37.47, "CC (PCK)": 53.94}, "VGGT-1B": {"SOC (PCK)": 57.18, "CC (PCK)": 69.73}, "DeiT3-B/16": {"SOC (PCK)": 39.16, "CC (PCK)": 57.26}, "SAM-B": {"SOC (PCK)": 43.04, "CC (PCK)": 55.64}, "DUNE-B/14 (448px)": {"SOC (PCK)": 60.28, "CC (PCK)": 72.31}, "Qwen2.5-VL-7B": {"SOC (PCK)": 34.31, "CC (PCK)": 47.7}, "SD 2.1": {"SOC (PCK)": 54.37, "CC (PCK)": 62.7}, "DINOv3-L/16": {"SOC (PCK)": 72.73, "CC (PCK)": 81.51}}, "group": "soco_correspondence"}, "soco_geo": {"display": "Geometric SOC", "metrics_meta": {"Geo PCK": {"higher_better": true}}, "results": {"V-JEPA2.1-B": {"Geo PCK": 69.5}, "CLIP-B/16 (LAION2B)": {"Geo PCK": 64.87}, "DINOv2-L/14": {"Geo PCK": 71.87}, "SigLIP-B/16": {"Geo PCK": 64.54}, "MAE-B/16": {"Geo PCK": 66.51}, "DINO-B/16": {"Geo PCK": 68.36}, "iBOT-B/16": {"Geo PCK": 69.41}, "DUNE-B/14": {"Geo PCK": 72.98}, "ConvNeXt-B (IN22K)": {"Geo PCK": 66.53}, "SAM-B": {"Geo PCK": 70.7}, "C-RADIO-v3-B": {"Geo PCK": 68.87}, "CLIP-B/16 (OpenAI)": {"Geo PCK": 64.69}, "CroCov2-B/16": {"Geo PCK": 67.19}, "DeiT3-B/16": {"Geo PCK": 65.21}, "PIXIO-B/16": {"Geo PCK": 71.82}, "DINOv2-B/14": {"Geo PCK": 71.39}, "MetaCLIP2-B/16": {"Geo PCK": 65.08}, "DINOv3-B/16": {"Geo PCK": 76.04}, "PE-Spatial-B/16": {"Geo PCK": 68.53}, "MiDaS-L/16": {"Geo PCK": 66.86}, "I-JEPA-H/16": {"Geo PCK": 71.71}, "VGGT-1B": {"Geo PCK": 71.98}, "DUNE-B/14 (448px)": {"Geo PCK": 73.55}, "SD 2.1": {"Geo PCK": 76.82}, "DINOv3-L/16": {"Geo PCK": 75.29}}, "group": "soco_correspondence"}, "knn": {"display": "kNN Classification (ImageNet)", "metrics_meta": {"Top-1 (k=20)": {"higher_better": true}, "Top-5 (k=20)": {"higher_better": true}, "Top-1 (k=100)": {"higher_better": true}, "Top-5 (k=100)": {"higher_better": true}, "Top-1 (k=200)": {"higher_better": true}, "Top-5 (k=200)": {"higher_better": true}}, "results": {"DINOv2-B/14": {"Top-1 (k=20)": 81.64, "Top-5 (k=20)": 93.53, "Top-1 (k=100)": 80.77, "Top-5 (k=100)": 94.97, "Top-1 (k=200)": 80.28, "Top-5 (k=200)": 95.28}, "CLIP-B/16 (LAION2B)": {"Top-1 (k=20)": 75.29, "Top-5 (k=20)": 91.8, "Top-1 (k=100)": 74.22, "Top-5 (k=100)": 93.3, "Top-1 (k=200)": 73.28, "Top-5 (k=200)": 93.32}, "V-JEPA2.1-B": {"Top-1 (k=20)": 45.0, "Top-5 (k=20)": 67.51, "Top-1 (k=100)": 43.35, "Top-5 (k=100)": 69.7, "Top-1 (k=200)": 41.69, "Top-5 (k=200)": 68.94}, "DINOv2-L/14": {"Top-1 (k=20)": 83.05, "Top-5 (k=20)": 94.0, "Top-1 (k=100)": 82.46, "Top-5 (k=100)": 95.43, "Top-1 (k=200)": 82.1, "Top-5 (k=200)": 95.77}, "CroCov2-B/16": {"Top-1 (k=20)": 18.14, "Top-5 (k=20)": 32.32, "Top-1 (k=100)": 18.07, "Top-5 (k=100)": 36.06, "Top-1 (k=200)": 17.2, "Top-5 (k=200)": 35.8}, "CLIP-B/16 (OpenAI)": {"Top-1 (k=20)": 72.08, "Top-5 (k=20)": 89.87, "Top-1 (k=100)": 70.98, "Top-5 (k=100)": 91.81, "Top-1 (k=200)": 69.95, "Top-5 (k=200)": 91.83}, "DeiT3-B/16": {"Top-1 (k=20)": 83.9, "Top-5 (k=20)": 93.25, "Top-1 (k=100)": 83.5, "Top-5 (k=100)": 95.18, "Top-1 (k=200)": 83.24, "Top-5 (k=200)": 95.66}, "C-RADIO-v3-B": {"Top-1 (k=20)": 76.95, "Top-5 (k=20)": 92.71, "Top-1 (k=100)": 75.51, "Top-5 (k=100)": 94.04, "Top-1 (k=200)": 74.4, "Top-5 (k=200)": 94.13}, "PIXIO-B/16": {"Top-1 (k=20)": 58.36, "Top-5 (k=20)": 80.57, "Top-1 (k=100)": 56.36, "Top-5 (k=100)": 81.96, "Top-1 (k=200)": 54.53, "Top-5 (k=200)": 81.36}, "ConvNeXt-B (IN22K)": {"Top-1 (k=20)": 82.51, "Top-5 (k=20)": 94.41, "Top-1 (k=100)": 81.79, "Top-5 (k=100)": 95.97, "Top-1 (k=200)": 81.27, "Top-5 (k=200)": 96.25}, "MetaCLIP2-B/16": {"Top-1 (k=20)": 75.61, "Top-5 (k=20)": 91.94, "Top-1 (k=100)": 74.26, "Top-5 (k=100)": 93.49, "Top-1 (k=200)": 73.33, "Top-5 (k=200)": 93.43}, "SigLIP-B/16": {"Top-1 (k=20)": 12.94, "Top-5 (k=20)": 23.63, "Top-1 (k=100)": 14.12, "Top-5 (k=100)": 28.12, "Top-1 (k=200)": 14.17, "Top-5 (k=200)": 28.84}, "MAE-B/16": {"Top-1 (k=20)": 46.28, "Top-5 (k=20)": 67.31, "Top-1 (k=100)": 45.93, "Top-5 (k=100)": 70.61, "Top-1 (k=200)": 44.61, "Top-5 (k=200)": 70.17}, "DINO-B/16": {"Top-1 (k=20)": 75.04, "Top-5 (k=20)": 90.7, "Top-1 (k=100)": 73.49, "Top-5 (k=100)": 92.28, "Top-1 (k=200)": 72.61, "Top-5 (k=200)": 92.28}, "DINOv3-B/16": {"Top-1 (k=20)": 82.37, "Top-5 (k=20)": 94.4, "Top-1 (k=100)": 81.75, "Top-5 (k=100)": 95.65, "Top-1 (k=200)": 81.29, "Top-5 (k=200)": 95.91}, "iBOT-B/16": {"Top-1 (k=20)": 76.3, "Top-5 (k=20)": 91.15, "Top-1 (k=100)": 75.09, "Top-5 (k=100)": 92.74, "Top-1 (k=200)": 74.25, "Top-5 (k=200)": 92.87}, "PE-Spatial-B/16": {"Top-1 (k=20)": 53.07, "Top-5 (k=20)": 75.7, "Top-1 (k=100)": 50.33, "Top-5 (k=100)": 77.48, "Top-1 (k=200)": 48.5, "Top-5 (k=200)": 76.63}, "DUNE-B/14": {"Top-1 (k=20)": 47.77, "Top-5 (k=20)": 69.59, "Top-1 (k=100)": 46.48, "Top-5 (k=100)": 72.52, "Top-1 (k=200)": 45.01, "Top-5 (k=200)": 72.06}, "MiDaS-L/16": {"Top-1 (k=20)": 60.29, "Top-5 (k=20)": 77.35, "Top-1 (k=100)": 60.05, "Top-5 (k=100)": 80.55, "Top-1 (k=200)": 59.58, "Top-5 (k=200)": 80.97}, "I-JEPA-H/16": {"Top-1 (k=20)": 60.51, "Top-5 (k=20)": 77.14, "Top-1 (k=100)": 61.76, "Top-5 (k=100)": 80.37, "Top-1 (k=200)": 61.6, "Top-5 (k=200)": 80.76}, "DUNE-B/14 (448px)": {"Top-1 (k=20)": 56.61, "Top-5 (k=20)": 78.2, "Top-1 (k=100)": 54.3, "Top-5 (k=100)": 80.0, "Top-1 (k=200)": 52.64, "Top-5 (k=200)": 79.44}, "SD 2.1": {"Top-1 (k=20)": 4.86, "Top-5 (k=20)": 10.28, "Top-1 (k=100)": 6.35, "Top-5 (k=100)": 14.52, "Top-1 (k=200)": 6.82, "Top-5 (k=200)": 15.9}, "DINOv3-L/16": {"Top-1 (k=20)": 84.91, "Top-5 (k=20)": 95.19, "Top-1 (k=100)": 84.79, "Top-5 (k=100)": 96.6, "Top-1 (k=200)": 84.67, "Top-5 (k=200)": 96.89}}, "group": "downstream"}, "semseg": {"display": "Semantic Segmentation (ADE20K)", "metrics_meta": {"mIoU": {"higher_better": true}}, "results": {"CLIP-B/16 (OpenAI)": {"mIoU": 24.26}, "MetaCLIP2-B/16": {"mIoU": 35.04}, "DINOv2-B/14": {"mIoU": 45.37}, "SAM-B": {"mIoU": 25.36}, "CLIP-B/16 (LAION2B)": {"mIoU": 33.7}, "MAE-B/16": {"mIoU": 15.91}, "SigLIP-B/16": {"mIoU": 19.49}, "DeiT3-B/16": {"mIoU": 35.67}, "DINOv3-B/16": {"mIoU": 41.96}, "PE-Spatial-B/16": {"mIoU": 42.64}, "iBOT-B/16": {"mIoU": 29.01}, "DINO-B/16": {"mIoU": 24.36}, "ConvNeXt-B (IN22K)": {"mIoU": 31.62}, "PIXIO-B/16": {"mIoU": 39.41}, "C-RADIO-v3-B": {"mIoU": 47.67}, "CroCov2-B/16": {"mIoU": 16.14}, "DUNE-B/14": {"mIoU": 29.58}, "V-JEPA2.1-B": {"mIoU": 32.46}, "MiDaS-L/16": {"mIoU": 32.06}, "DINOv2-L/14": {"mIoU": 45.72}, "I-JEPA-H/16": {"mIoU": 18.32}, "DUNE-B/14 (448px)": {"mIoU": 33.35}, "SD 2.1": {"mIoU": 24.96}, "DINOv3-L/16": {"mIoU": 41.47}}, "group": "downstream"}, "depth": {"display": "Depth Estimation (NYUv2)", "metrics_meta": {"SA δ1": {"higher_better": true}, "SA δ2": {"higher_better": true}, "SA δ3": {"higher_better": true}, "SA RMSE": {"higher_better": false}, "SI δ1": {"higher_better": true}, "SI δ2": {"higher_better": true}, "SI δ3": {"higher_better": true}, "SI RMSE": {"higher_better": false}}, "results": {"MetaCLIP2-B/16": {"SA δ1": 62.1, "SA δ2": 91.14, "SA δ3": 98.05, "SA RMSE": 0.7176, "SI δ1": 88.4, "SI δ2": 98.15, "SI δ3": 99.58, "SI RMSE": 0.3959}, "DINO-B/16": {"SA δ1": 69.2, "SA δ2": 91.78, "SA δ3": 97.86, "SA RMSE": 0.636, "SI δ1": 86.32, "SI δ2": 97.61, "SI δ3": 99.41, "SI RMSE": 0.424}, "iBOT-B/16": {"SA δ1": 70.71, "SA δ2": 93.11, "SA δ3": 98.4, "SA RMSE": 0.5946, "SI δ1": 88.44, "SI δ2": 98.08, "SI δ3": 99.52, "SI RMSE": 0.3938}, "DINOv2-L/14": {"SA δ1": 89.22, "SA δ2": 99.26, "SA δ3": 99.92, "SA RMSE": 0.3607, "SI δ1": 97.25, "SI δ2": 99.7, "SI δ3": 99.94, "SI RMSE": 0.2344}, "CLIP-B/16 (LAION2B)": {"SA δ1": 70.2, "SA δ2": 93.44, "SA δ3": 98.44, "SA RMSE": 0.5998, "SI δ1": 89.18, "SI δ2": 98.13, "SI δ3": 99.57, "SI RMSE": 0.3822}, "DINOv3-B/16": {"SA δ1": 80.44, "SA δ2": 98.06, "SA δ3": 99.84, "SA RMSE": 0.4554, "SI δ1": 95.61, "SI δ2": 99.5, "SI δ3": 99.91, "SI RMSE": 0.278}, "SigLIP-B/16": {"SA δ1": 53.95, "SA δ2": 82.83, "SA δ3": 94.25, "SA RMSE": 0.844, "SI δ1": 78.29, "SI δ2": 95.22, "SI δ3": 98.81, "SI RMSE": 0.5203}, "MAE-B/16": {"SA δ1": 54.3, "SA δ2": 83.08, "SA δ3": 94.01, "SA RMSE": 0.8467, "SI δ1": 74.71, "SI δ2": 94.15, "SI δ3": 98.48, "SI RMSE": 0.555}, "V-JEPA2.1-B": {"SA δ1": 85.2, "SA δ2": 98.55, "SA δ3": 99.84, "SA RMSE": 0.4085, "SI δ1": 95.97, "SI δ2": 99.46, "SI δ3": 99.9, "SI RMSE": 0.2649}, "PE-Spatial-B/16": {"SA δ1": 72.12, "SA δ2": 95.34, "SA δ3": 99.33, "SA RMSE": 0.5346, "SI δ1": 94.05, "SI δ2": 99.24, "SI δ3": 99.85, "SI RMSE": 0.3074}, "I-JEPA-H/16": {"SA δ1": 81.59, "SA δ2": 97.28, "SA δ3": 99.64, "SA RMSE": 0.4519, "SI δ1": 95.3, "SI δ2": 99.28, "SI δ3": 99.86, "SI RMSE": 0.2781}, "MiDaS-L/16": {"SA δ1": 69.72, "SA δ2": 92.63, "SA δ3": 98.11, "SA RMSE": 0.6172, "SI δ1": 88.67, "SI δ2": 97.97, "SI δ3": 99.5, "SI RMSE": 0.3884}, "DUNE-B/14": {"SA δ1": 82.95, "SA δ2": 97.44, "SA δ3": 99.76, "SA RMSE": 0.424, "SI δ1": 96.26, "SI δ2": 99.47, "SI δ3": 99.89, "SI RMSE": 0.2612}, "VGGT-1B": {"SA δ1": 94.04, "SA δ2": 99.58, "SA δ3": 99.92, "SA RMSE": 0.3255, "SI δ1": 98.36, "SI δ2": 99.76, "SI δ3": 99.95, "SI RMSE": 0.1908}, "CLIP-B/16 (OpenAI)": {"SA δ1": 66.66, "SA δ2": 92.2, "SA δ3": 98.29, "SA RMSE": 0.657, "SI δ1": 88.49, "SI δ2": 98.13, "SI δ3": 99.61, "SI RMSE": 0.3922}, "SAM-B": {"SA δ1": 61.55, "SA δ2": 87.6, "SA δ3": 96.05, "SA RMSE": 0.7321, "SI δ1": 83.36, "SI δ2": 96.98, "SI δ3": 99.34, "SI RMSE": 0.4591}, "DINOv2-B/14": {"SA δ1": 87.58, "SA δ2": 98.98, "SA δ3": 99.91, "SA RMSE": 0.3873, "SI δ1": 96.47, "SI δ2": 99.62, "SI δ3": 99.93, "SI RMSE": 0.2549}, "DeiT3-B/16": {"SA δ1": 78.21, "SA δ2": 96.38, "SA δ3": 99.4, "SA RMSE": 0.5126, "SI δ1": 90.5, "SI δ2": 98.64, "SI δ3": 99.73, "SI RMSE": 0.3639}, "C-RADIO-v3-B": {"SA δ1": 75.94, "SA δ2": 97.09, "SA δ3": 99.65, "SA RMSE": 0.5232, "SI δ1": 94.82, "SI δ2": 99.32, "SI δ3": 99.86, "SI RMSE": 0.2923}, "ConvNeXt-B (IN22K)": {"SA δ1": 68.55, "SA δ2": 92.61, "SA δ3": 98.32, "SA RMSE": 0.619, "SI δ1": 88.35, "SI δ2": 98.29, "SI δ3": 99.67, "SI RMSE": 0.3953}, "PIXIO-B/16": {"SA δ1": 85.11, "SA δ2": 98.58, "SA δ3": 99.84, "SA RMSE": 0.4062, "SI δ1": 96.96, "SI δ2": 99.53, "SI δ3": 99.89, "SI RMSE": 0.2382}, "CroCov2-B/16": {"SA δ1": 61.46, "SA δ2": 87.15, "SA δ3": 95.82, "SA RMSE": 0.734, "SI δ1": 86.34, "SI δ2": 97.49, "SI δ3": 99.45, "SI RMSE": 0.4103}, "DUNE-B/14 (448px)": {"SA δ1": 79.81, "SA δ2": 96.46, "SA δ3": 99.56, "SA RMSE": 0.4626, "SI δ1": 95.99, "SI δ2": 99.41, "SI δ3": 99.87, "SI RMSE": 0.2682}, "SD 2.1": {"SA δ1": 68.31, "SA δ2": 90.91, "SA δ3": 97.76, "SA RMSE": 0.6237, "SI δ1": 91.5, "SI δ2": 98.56, "SI δ3": 99.66, "SI RMSE": 0.3511}, "DINOv3-L/16": {"SA δ1": 86.78, "SA δ2": 99.1, "SA δ3": 99.87, "SA RMSE": 0.4035, "SI δ1": 97.41, "SI δ2": 99.71, "SI δ3": 99.94, "SI RMSE": 0.2305}}, "group": "downstream"}, "snorm": {"display": "Surface Normals (NYUv2)", "metrics_meta": {"δ1 (%)": {"higher_better": true}, "δ2 (%)": {"higher_better": true}, "δ3 (%)": {"higher_better": true}, "RMSE (deg)": {"higher_better": false}}, "results": {"MetaCLIP2-B/16": {"δ1 (%)": 39.65, "δ2 (%)": 63.48, "δ3 (%)": 72.9, "RMSE (deg)": 30.8}, "DINO-B/16": {"δ1 (%)": 37.57, "δ2 (%)": 60.28, "δ3 (%)": 70.13, "RMSE (deg)": 31.67}, "DINOv3-B/16": {"δ1 (%)": 54.54, "δ2 (%)": 76.01, "δ3 (%)": 82.93, "RMSE (deg)": 24.14}, "CLIP-B/16 (LAION2B)": {"δ1 (%)": 42.01, "δ2 (%)": 65.18, "δ3 (%)": 74.09, "RMSE (deg)": 29.93}, "SigLIP-B/16": {"δ1 (%)": 23.43, "δ2 (%)": 44.18, "δ3 (%)": 55.58, "RMSE (deg)": 37.85}, "DINOv2-L/14": {"δ1 (%)": 60.63, "δ2 (%)": 79.05, "δ3 (%)": 85.2, "RMSE (deg)": 22.5}, "iBOT-B/16": {"δ1 (%)": 44.1, "δ2 (%)": 67.06, "δ3 (%)": 75.34, "RMSE (deg)": 29.23}, "MAE-B/16": {"δ1 (%)": 4.93, "δ2 (%)": 18.04, "δ3 (%)": 28.62, "RMSE (deg)": 51.92}, "I-JEPA-H/16": {"δ1 (%)": 56.69, "δ2 (%)": 75.06, "δ3 (%)": 81.63, "RMSE (deg)": 25.13}, "PE-Spatial-B/16": {"δ1 (%)": 43.69, "δ2 (%)": 69.63, "δ3 (%)": 78.82, "RMSE (deg)": 26.68}, "V-JEPA2.1-B": {"δ1 (%)": 57.02, "δ2 (%)": 76.3, "δ3 (%)": 82.79, "RMSE (deg)": 24.19}, "DUNE-B/14": {"δ1 (%)": 57.47, "δ2 (%)": 76.8, "δ3 (%)": 83.3, "RMSE (deg)": 23.77}, "MiDaS-L/16": {"δ1 (%)": 43.33, "δ2 (%)": 64.91, "δ3 (%)": 73.16, "RMSE (deg)": 30.67}, "VGGT-1B": {"δ1 (%)": 61.71, "δ2 (%)": 79.74, "δ3 (%)": 85.83, "RMSE (deg)": 22.05}, "CLIP-B/16 (OpenAI)": {"δ1 (%)": 38.66, "δ2 (%)": 62.83, "δ3 (%)": 72.62, "RMSE (deg)": 30.29}, "DeiT3-B/16": {"δ1 (%)": 43.61, "δ2 (%)": 67.15, "δ3 (%)": 76.05, "RMSE (deg)": 28.56}, "DINOv2-B/14": {"δ1 (%)": 57.8, "δ2 (%)": 77.48, "δ3 (%)": 84.03, "RMSE (deg)": 23.38}, "SAM-B": {"δ1 (%)": 35.79, "δ2 (%)": 62.5, "δ3 (%)": 73.37, "RMSE (deg)": 29.13}, "C-RADIO-v3-B": {"δ1 (%)": 54.35, "δ2 (%)": 75.35, "δ3 (%)": 82.32, "RMSE (deg)": 24.75}, "ConvNeXt-B (IN22K)": {"δ1 (%)": 37.8, "δ2 (%)": 64.47, "δ3 (%)": 74.85, "RMSE (deg)": 28.61}, "PIXIO-B/16": {"δ1 (%)": 56.93, "δ2 (%)": 74.93, "δ3 (%)": 81.47, "RMSE (deg)": 25.19}, "CroCov2-B/16": {"δ1 (%)": 44.42, "δ2 (%)": 67.03, "δ3 (%)": 75.28, "RMSE (deg)": 29.29}, "DUNE-B/14 (448px)": {"δ1 (%)": 56.66, "δ2 (%)": 76.45, "δ3 (%)": 83.18, "RMSE (deg)": 23.76}, "SD 2.1": {"δ1 (%)": 50.69, "δ2 (%)": 71.05, "δ3 (%)": 78.17, "RMSE (deg)": 27.6}, "DINOv3-L/16": {"δ1 (%)": 60.13, "δ2 (%)": 79.04, "δ3 (%)": 85.2, "RMSE (deg)": 22.59}}, "group": "downstream"}, "tracking": {"display": "Tracking (TAP-Vid)", "metrics_meta": {"AJ": {"higher_better": true}, "Occ. Acc": {"higher_better": true}, "δ_avg": {"higher_better": true}, "δ<1": {"higher_better": true}, "δ<2": {"higher_better": true}, "δ<4": {"higher_better": true}, "δ<8": {"higher_better": true}, "δ<16": {"higher_better": true}}, "results": {"DINOv2-B/14": {"AJ": 22.86, "Occ. Acc": 75.13, "δ_avg": 36.89, "δ<1": 2.42, "δ<2": 9.01, "δ<4": 29.85, "δ<8": 62.17, "δ<16": 81.02}, "DINOv2-L/14": {"AJ": 24.05, "Occ. Acc": 75.13, "δ_avg": 38.5, "δ<1": 2.62, "δ<2": 9.88, "δ<4": 31.93, "δ<8": 65.24, "δ<16": 82.85}, "V-JEPA2.1-B": {"AJ": 20.62, "Occ. Acc": 75.13, "δ_avg": 34.11, "δ<1": 1.84, "δ<2": 7.03, "δ<4": 26.06, "δ<8": 58.03, "δ<16": 77.61}, "I-JEPA-H/16": {"AJ": 17.55, "Occ. Acc": 75.13, "δ_avg": 29.36, "δ<1": 1.56, "δ<2": 6.01, "δ<4": 21.99, "δ<8": 50.48, "δ<16": 66.76}, "VGGT-1B": {"AJ": 13.09, "Occ. Acc": 75.13, "δ_avg": 22.81, "δ<1": 1.41, "δ<2": 5.34, "δ<4": 17.13, "δ<8": 36.93, "δ<16": 53.27}, "CLIP-B/16 (OpenAI)": {"AJ": 12.64, "Occ. Acc": 75.13, "δ_avg": 22.75, "δ<1": 1.08, "δ<2": 3.9, "δ<4": 14.42, "δ<8": 36.48, "δ<16": 57.9}, "SAM-B": {"AJ": 14.31, "Occ. Acc": 75.13, "δ_avg": 25.76, "δ<1": 1.46, "δ<2": 4.97, "δ<4": 18.62, "δ<8": 43.28, "δ<16": 60.5}, "DeiT3-B/16": {"AJ": 12.85, "Occ. Acc": 75.13, "δ_avg": 22.88, "δ<1": 1.05, "δ<2": 4.0, "δ<4": 14.53, "δ<8": 36.99, "δ<16": 57.81}, "C-RADIO-v3-B": {"AJ": 19.36, "Occ. Acc": 75.13, "δ_avg": 32.34, "δ<1": 1.67, "δ<2": 6.65, "δ<4": 22.88, "δ<8": 53.99, "δ<16": 76.52}, "CroCov2-B/16": {"AJ": 14.29, "Occ. Acc": 75.13, "δ_avg": 25.47, "δ<1": 1.47, "δ<2": 5.35, "δ<4": 19.36, "δ<8": 42.76, "δ<16": 58.42}, "PIXIO-B/16": {"AJ": 17.72, "Occ. Acc": 75.13, "δ_avg": 29.75, "δ<1": 1.46, "δ<2": 5.55, "δ<4": 20.17, "δ<8": 49.29, "δ<16": 72.3}, "ConvNeXt-B (IN22K)": {"AJ": 7.03, "Occ. Acc": 75.13, "δ_avg": 13.03, "δ<1": 0.37, "δ<2": 1.57, "δ<4": 6.06, "δ<8": 18.95, "δ<16": 38.22}, "MetaCLIP2-B/16": {"AJ": 13.29, "Occ. Acc": 75.13, "δ_avg": 23.83, "δ<1": 1.16, "δ<2": 4.24, "δ<4": 15.5, "δ<8": 38.13, "δ<16": 60.15}, "MAE-B/16": {"AJ": 13.36, "Occ. Acc": 75.13, "δ_avg": 23.89, "δ<1": 1.39, "δ<2": 4.85, "δ<4": 17.8, "δ<8": 39.68, "δ<16": 55.74}, "PE-Spatial-B/16": {"AJ": 20.45, "Occ. Acc": 75.13, "δ_avg": 33.98, "δ<1": 1.81, "δ<2": 7.1, "δ<4": 24.7, "δ<8": 57.29, "δ<16": 79.01}, "iBOT-B/16": {"AJ": 19.71, "Occ. Acc": 75.13, "δ_avg": 32.45, "δ<1": 1.76, "δ<2": 6.55, "δ<4": 23.47, "δ<8": 54.79, "δ<16": 75.67}, "DUNE-B/14": {"AJ": 24.41, "Occ. Acc": 75.13, "δ_avg": 39.31, "δ<1": 2.75, "δ<2": 10.73, "δ<4": 35.44, "δ<8": 66.45, "δ<16": 81.19}, "MiDaS-L/16": {"AJ": 18.22, "Occ. Acc": 75.13, "δ_avg": 30.57, "δ<1": 1.66, "δ<2": 6.07, "δ<4": 22.39, "δ<8": 51.73, "δ<16": 70.99}, "SigLIP-B/16": {"AJ": 7.92, "Occ. Acc": 75.13, "δ_avg": 15.05, "δ<1": 0.69, "δ<2": 2.27, "δ<4": 8.82, "δ<8": 22.9, "δ<16": 40.58}, "CLIP-B/16 (LAION2B)": {"AJ": 12.69, "Occ. Acc": 75.13, "δ_avg": 22.98, "δ<1": 1.09, "δ<2": 3.82, "δ<4": 14.61, "δ<8": 36.82, "δ<16": 58.55}, "DINOv3-B/16": {"AJ": 22.07, "Occ. Acc": 75.13, "δ_avg": 35.68, "δ<1": 1.98, "δ<2": 7.56, "δ<4": 27.5, "δ<8": 61.33, "δ<16": 80.04}, "DINO-B/16": {"AJ": 19.48, "Occ. Acc": 75.13, "δ_avg": 32.51, "δ<1": 1.76, "δ<2": 6.42, "δ<4": 24.0, "δ<8": 55.24, "δ<16": 75.12}, "DUNE-B/14 (448px)": {"AJ": 24.76, "Occ. Acc": 75.13, "δ_avg": 39.73, "δ<1": 2.73, "δ<2": 10.85, "δ<4": 35.92, "δ<8": 67.24, "δ<16": 81.91}, "SD 2.1": {"AJ": 15.31, "Occ. Acc": 75.13, "δ_avg": 26.3, "δ<1": 1.29, "δ<2": 4.87, "δ<4": 17.76, "δ<8": 44.12, "δ<16": 63.47}, "DINOv3-L/16": {"AJ": 22.68, "Occ. Acc": 75.13, "δ_avg": 36.64, "δ<1": 2.01, "δ<2": 7.69, "δ<4": 27.53, "δ<8": 63.09, "δ<16": 82.9}}, "group": "downstream"}, "navi": {"display": "MV Correspondence (NAVI)", "metrics_meta": {"Recall@0.01m": {"higher_better": true}, "Recall@0.02m": {"higher_better": true}, "Recall@0.05m": {"higher_better": true}, "Recall@5px": {"higher_better": true}, "Recall@25px": {"higher_better": true}, "Recall@50px": {"higher_better": true}, "Recall@0-30deg@2cm": {"higher_better": true}, "Recall@30-60deg@2cm": {"higher_better": true}, "Recall@60-90deg@2cm": {"higher_better": true}, "Recall@90-120deg@2cm": {"higher_better": true}}, "results": {"DINOv3-B/16": {"Recall@0.01m": 36.48, "Recall@0.02m": 53.32, "Recall@0.05m": 80.4, "Recall@5px": 6.75, "Recall@25px": 34.77, "Recall@50px": 49.86, "Recall@0-30deg@2cm": 96.98, "Recall@30-60deg@2cm": 73.94, "Recall@60-90deg@2cm": 42.23, "Recall@90-120deg@2cm": 24.22}, "SigLIP-B/16": {"Recall@0.01m": 9.82, "Recall@0.02m": 21.78, "Recall@0.05m": 58.09, "Recall@5px": 1.92, "Recall@25px": 7.72, "Recall@50px": 16.63, "Recall@0-30deg@2cm": 44.67, "Recall@30-60deg@2cm": 25.93, "Recall@60-90deg@2cm": 16.31, "Recall@90-120deg@2cm": 11.9}, "PE-Spatial-B/16": {"Recall@0.01m": 29.16, "Recall@0.02m": 46.76, "Recall@0.05m": 78.53, "Recall@5px": 4.81, "Recall@25px": 25.55, "Recall@50px": 40.88, "Recall@0-30deg@2cm": 86.52, "Recall@30-60deg@2cm": 60.61, "Recall@60-90deg@2cm": 37.52, "Recall@90-120deg@2cm": 23.62}, "MAE-B/16": {"Recall@0.01m": 17.94, "Recall@0.02m": 31.01, "Recall@0.05m": 64.62, "Recall@5px": 3.59, "Recall@25px": 15.86, "Recall@50px": 26.33, "Recall@0-30deg@2cm": 80.22, "Recall@30-60deg@2cm": 40.1, "Recall@60-90deg@2cm": 19.02, "Recall@90-120deg@2cm": 9.81}, "CLIP-B/16 (LAION2B)": {"Recall@0.01m": 15.4, "Recall@0.02m": 31.06, "Recall@0.05m": 68.05, "Recall@5px": 2.39, "Recall@25px": 12.18, "Recall@50px": 24.83, "Recall@0-30deg@2cm": 64.68, "Recall@30-60deg@2cm": 36.05, "Recall@60-90deg@2cm": 23.8, "Recall@90-120deg@2cm": 16.69}, "DINO-B/16": {"Recall@0.01m": 26.38, "Recall@0.02m": 42.84, "Recall@0.05m": 74.57, "Recall@5px": 4.47, "Recall@25px": 23.11, "Recall@50px": 37.75, "Recall@0-30deg@2cm": 88.56, "Recall@30-60deg@2cm": 56.6, "Recall@60-90deg@2cm": 30.66, "Recall@90-120deg@2cm": 19.64}, "DUNE-B/14": {"Recall@0.01m": 28.96, "Recall@0.02m": 44.55, "Recall@0.05m": 75.96, "Recall@5px": 5.95, "Recall@25px": 26.51, "Recall@50px": 39.83, "Recall@0-30deg@2cm": 95.55, "Recall@30-60deg@2cm": 63.36, "Recall@60-90deg@2cm": 30.39, "Recall@90-120deg@2cm": 16.28}, "iBOT-B/16": {"Recall@0.01m": 27.13, "Recall@0.02m": 44.53, "Recall@0.05m": 76.27, "Recall@5px": 4.41, "Recall@25px": 24.19, "Recall@50px": 39.7, "Recall@0-30deg@2cm": 90.2, "Recall@30-60deg@2cm": 58.09, "Recall@60-90deg@2cm": 32.79, "Recall@90-120deg@2cm": 21.08}, "MiDaS-L/16": {"Recall@0.01m": 24.61, "Recall@0.02m": 41.08, "Recall@0.05m": 73.43, "Recall@5px": 4.18, "Recall@25px": 21.77, "Recall@50px": 36.18, "Recall@0-30deg@2cm": 81.94, "Recall@30-60deg@2cm": 52.26, "Recall@60-90deg@2cm": 30.7, "Recall@90-120deg@2cm": 20.79}, "DeiT3-B/16": {"Recall@0.01m": 17.03, "Recall@0.02m": 31.99, "Recall@0.05m": 66.25, "Recall@5px": 2.68, "Recall@25px": 13.86, "Recall@50px": 26.38, "Recall@0-30deg@2cm": 66.94, "Recall@30-60deg@2cm": 36.93, "Recall@60-90deg@2cm": 25.0, "Recall@90-120deg@2cm": 16.71}, "C-RADIO-v3-B": {"Recall@0.01m": 33.06, "Recall@0.02m": 51.6, "Recall@0.05m": 81.81, "Recall@5px": 5.43, "Recall@25px": 29.13, "Recall@50px": 45.75, "Recall@0-30deg@2cm": 92.39, "Recall@30-60deg@2cm": 66.18, "Recall@60-90deg@2cm": 42.43, "Recall@90-120deg@2cm": 27.24}, "CroCov2-B/16": {"Recall@0.01m": 18.76, "Recall@0.02m": 32.89, "Recall@0.05m": 67.24, "Recall@5px": 3.56, "Recall@25px": 16.32, "Recall@50px": 27.73, "Recall@0-30deg@2cm": 80.51, "Recall@30-60deg@2cm": 45.43, "Recall@60-90deg@2cm": 20.96, "Recall@90-120deg@2cm": 9.51}, "PIXIO-B/16": {"Recall@0.01m": 24.73, "Recall@0.02m": 41.91, "Recall@0.05m": 75.33, "Recall@5px": 3.8, "Recall@25px": 21.78, "Recall@50px": 37.24, "Recall@0-30deg@2cm": 92.56, "Recall@30-60deg@2cm": 60.02, "Recall@60-90deg@2cm": 28.52, "Recall@90-120deg@2cm": 13.63}, "CLIP-B/16 (OpenAI)": {"Recall@0.01m": 15.11, "Recall@0.02m": 30.22, "Recall@0.05m": 67.38, "Recall@5px": 2.4, "Recall@25px": 11.91, "Recall@50px": 24.19, "Recall@0-30deg@2cm": 64.45, "Recall@30-60deg@2cm": 35.2, "Recall@60-90deg@2cm": 23.22, "Recall@90-120deg@2cm": 15.29}, "SAM-B": {"Recall@0.01m": 25.58, "Recall@0.02m": 38.86, "Recall@0.05m": 69.93, "Recall@5px": 5.3, "Recall@25px": 23.32, "Recall@50px": 34.64, "Recall@0-30deg@2cm": 92.2, "Recall@30-60deg@2cm": 54.94, "Recall@60-90deg@2cm": 24.15, "Recall@90-120deg@2cm": 12.26}, "MetaCLIP2-B/16": {"Recall@0.01m": 15.52, "Recall@0.02m": 31.2, "Recall@0.05m": 68.64, "Recall@5px": 2.39, "Recall@25px": 12.51, "Recall@50px": 25.1, "Recall@0-30deg@2cm": 62.2, "Recall@30-60deg@2cm": 36.86, "Recall@60-90deg@2cm": 24.45, "Recall@90-120deg@2cm": 17.09}, "DINOv2-B/14": {"Recall@0.01m": 36.16, "Recall@0.02m": 54.39, "Recall@0.05m": 82.42, "Recall@5px": 6.03, "Recall@25px": 32.6, "Recall@50px": 49.01, "Recall@0-30deg@2cm": 90.81, "Recall@30-60deg@2cm": 68.94, "Recall@60-90deg@2cm": 46.25, "Recall@90-120deg@2cm": 31.27}, "ConvNeXt-B (IN22K)": {"Recall@0.01m": 24.16, "Recall@0.02m": 40.78, "Recall@0.05m": 74.04, "Recall@5px": 3.2, "Recall@25px": 20.27, "Recall@50px": 35.16, "Recall@0-30deg@2cm": 81.78, "Recall@30-60deg@2cm": 49.91, "Recall@60-90deg@2cm": 31.71, "Recall@90-120deg@2cm": 20.88}, "DINOv2-L/14": {"Recall@0.01m": 39.37, "Recall@0.02m": 57.11, "Recall@0.05m": 83.4, "Recall@5px": 6.74, "Recall@25px": 35.8, "Recall@50px": 51.97, "Recall@0-30deg@2cm": 92.72, "Recall@30-60deg@2cm": 71.83, "Recall@60-90deg@2cm": 49.07, "Recall@90-120deg@2cm": 34.17}, "V-JEPA2.1-B": {"Recall@0.01m": 28.52, "Recall@0.02m": 43.79, "Recall@0.05m": 74.98, "Recall@5px": 5.1, "Recall@25px": 25.59, "Recall@50px": 39.15, "Recall@0-30deg@2cm": 92.49, "Recall@30-60deg@2cm": 60.48, "Recall@60-90deg@2cm": 29.83, "Recall@90-120deg@2cm": 18.33}, "I-JEPA-H/16": {"Recall@0.01m": 24.83, "Recall@0.02m": 39.77, "Recall@0.05m": 71.04, "Recall@5px": 4.21, "Recall@25px": 22.25, "Recall@50px": 35.04, "Recall@0-30deg@2cm": 87.18, "Recall@30-60deg@2cm": 55.44, "Recall@60-90deg@2cm": 25.75, "Recall@90-120deg@2cm": 15.88}, "VGGT-1B": {"Recall@0.01m": 18.73, "Recall@0.02m": 33.21, "Recall@0.05m": 69.92, "Recall@5px": 3.62, "Recall@25px": 16.7, "Recall@50px": 28.14, "Recall@0-30deg@2cm": 87.67, "Recall@30-60deg@2cm": 44.16, "Recall@60-90deg@2cm": 19.24, "Recall@90-120deg@2cm": 9.68}, "DUNE-B/14 (448px)": {"Recall@0.01m": 29.44, "Recall@0.02m": 44.77, "Recall@0.05m": 75.95, "Recall@5px": 6.13, "Recall@25px": 27.06, "Recall@50px": 40.24, "Recall@0-30deg@2cm": 95.95, "Recall@30-60deg@2cm": 64.03, "Recall@60-90deg@2cm": 30.5, "Recall@90-120deg@2cm": 16.15}, "SD 2.1": {"Recall@0.01m": 26.33, "Recall@0.02m": 38.77, "Recall@0.05m": 69.0, "Recall@5px": 5.64, "Recall@25px": 25.03, "Recall@50px": 35.56, "Recall@0-30deg@2cm": 93.1, "Recall@30-60deg@2cm": 58.41, "Recall@60-90deg@2cm": 22.19, "Recall@90-120deg@2cm": 10.48}, "DINOv3-L/16": {"Recall@0.01m": 41.79, "Recall@0.02m": 59.29, "Recall@0.05m": 84.45, "Recall@5px": 7.37, "Recall@25px": 39.4, "Recall@50px": 55.21, "Recall@0-30deg@2cm": 97.86, "Recall@30-60deg@2cm": 78.45, "Recall@60-90deg@2cm": 48.99, "Recall@90-120deg@2cm": 33.3}}, "group": "downstream"}, "pose": {"display": "3D Pose Estimation (ImageNet3D)", "metrics_meta": {"Acc@π/6 (%)": {"higher_better": true}, "Acc@π/18 (%)": {"higher_better": true}, "Med. Err (deg)": {"higher_better": false}, "Mean Err (deg)": {"higher_better": false}}, "results": {"CLIP-B/16 (LAION2B)": {"Acc@π/6 (%)": 38.92, "Acc@π/18 (%)": 15.84, "Med. Err (deg)": 46.87, "Mean Err (deg)": 63.62}, "DUNE-B/14": {"Acc@π/6 (%)": 41.21, "Acc@π/18 (%)": 18.04, "Med. Err (deg)": 47.48, "Mean Err (deg)": 63.91}, "PE-Spatial-B/16": {"Acc@π/6 (%)": 37.25, "Acc@π/18 (%)": 14.56, "Med. Err (deg)": 55.07, "Mean Err (deg)": 68.82}, "MAE-B/16": {"Acc@π/6 (%)": 41.83, "Acc@π/18 (%)": 18.69, "Med. Err (deg)": 49.96, "Mean Err (deg)": 67.96}, "MiDaS-L/16": {"Acc@π/6 (%)": 38.77, "Acc@π/18 (%)": 16.06, "Med. Err (deg)": 50.58, "Mean Err (deg)": 65.62}, "V-JEPA2.1-B": {"Acc@π/6 (%)": 42.12, "Acc@π/18 (%)": 18.86, "Med. Err (deg)": 45.9, "Mean Err (deg)": 62.83}, "DINOv2-L/14": {"Acc@π/6 (%)": 46.82, "Acc@π/18 (%)": 21.04, "Med. Err (deg)": 34.42, "Mean Err (deg)": 59.89}, "I-JEPA-H/16": {"Acc@π/6 (%)": 52.56, "Acc@π/18 (%)": 25.91, "Med. Err (deg)": 26.66, "Mean Err (deg)": 53.82}, "C-RADIO-v3-B": {"Acc@π/6 (%)": 46.9, "Acc@π/18 (%)": 20.81, "Med. Err (deg)": 34.54, "Mean Err (deg)": 59.47}, "ConvNeXt-B (IN22K)": {"Acc@π/6 (%)": 30.88, "Acc@π/18 (%)": 11.03, "Med. Err (deg)": 61.97, "Mean Err (deg)": 73.09}, "CLIP-B/16 (OpenAI)": {"Acc@π/6 (%)": 35.54, "Acc@π/18 (%)": 13.66, "Med. Err (deg)": 51.38, "Mean Err (deg)": 64.42}, "DeiT3-B/16": {"Acc@π/6 (%)": 33.92, "Acc@π/18 (%)": 12.41, "Med. Err (deg)": 56.46, "Mean Err (deg)": 70.01}, "PIXIO-B/16": {"Acc@π/6 (%)": 54.73, "Acc@π/18 (%)": 25.87, "Med. Err (deg)": 24.94, "Mean Err (deg)": 52.0}, "DINOv2-B/14": {"Acc@π/6 (%)": 53.25, "Acc@π/18 (%)": 23.78, "Med. Err (deg)": 26.47, "Mean Err (deg)": 52.31}, "CroCov2-B/16": {"Acc@π/6 (%)": 38.92, "Acc@π/18 (%)": 15.92, "Med. Err (deg)": 52.6, "Mean Err (deg)": 65.38}, "MetaCLIP2-B/16": {"Acc@π/6 (%)": 40.26, "Acc@π/18 (%)": 16.7, "Med. Err (deg)": 45.29, "Mean Err (deg)": 62.88}, "DINOv3-B/16": {"Acc@π/6 (%)": 53.18, "Acc@π/18 (%)": 22.58, "Med. Err (deg)": 26.8, "Mean Err (deg)": 51.29}, "DINO-B/16": {"Acc@π/6 (%)": 42.25, "Acc@π/18 (%)": 18.91, "Med. Err (deg)": 43.89, "Mean Err (deg)": 63.08}, "SigLIP-B/16": {"Acc@π/6 (%)": 35.16, "Acc@π/18 (%)": 13.15, "Med. Err (deg)": 53.62, "Mean Err (deg)": 65.37}, "iBOT-B/16": {"Acc@π/6 (%)": 41.37, "Acc@π/18 (%)": 18.65, "Med. Err (deg)": 46.03, "Mean Err (deg)": 63.71}, "DUNE-B/14 (448px)": {"Acc@π/6 (%)": 41.89, "Acc@π/18 (%)": 18.17, "Med. Err (deg)": 44.75, "Mean Err (deg)": 63.6}, "SD 2.1": {"Acc@π/6 (%)": 35.61, "Acc@π/18 (%)": 13.56, "Med. Err (deg)": 59.15, "Mean Err (deg)": 69.26}, "DINOv3-L/16": {"Acc@π/6 (%)": 52.85, "Acc@π/18 (%)": 23.5, "Med. Err (deg)": 26.9, "Mean Err (deg)": 52.72}}, "group": "downstream"}, "det3d": {"display": "3D Detection (ARKit)", "metrics_meta": {"AP2D": {"higher_better": true}, "AP3D": {"higher_better": true}, "AP3D@15": {"higher_better": true}, "AP3D@25": {"higher_better": true}, "AP3D@50": {"higher_better": true}}, "results": {"MAE-B/16": {"AP2D": 21.3, "AP3D": 19.8, "AP3D@15": 28.1, "AP3D@25": 20.9, "AP3D@50": 5.6}, "CroCov2-B/16": {"AP2D": 26.9, "AP3D": 25.7, "AP3D@15": 35.8, "AP3D@25": 27.6, "AP3D@50": 8.0}, "CLIP-B/16 (OpenAI)": {"AP2D": 28.3, "AP3D": 26.7, "AP3D@15": 37.5, "AP3D@25": 28.7, "AP3D@50": 7.9}, "DINO-S/16": {"AP2D": 28.21, "AP3D": 27.25, "AP3D@15": 37.39, "AP3D@25": 29.67, "AP3D@50": 9.12}, "DINO-B/16": {"AP2D": 29.1, "AP3D": 27.8, "AP3D@15": 39.2, "AP3D@25": 30.6, "AP3D@50": 7.9}, "SD 2.1": {"AP2D": 30.9, "AP3D": 29.1, "AP3D@15": 40.9, "AP3D@25": 31.4, "AP3D@50": 9.6}, "iBOT-S/16": {"AP2D": 28.85, "AP3D": 28.45, "AP3D@15": 40.07, "AP3D@25": 31.58, "AP3D@50": 8.33}, "iBOT-B/16": {"AP2D": 32.2, "AP3D": 31.5, "AP3D@15": 43.4, "AP3D@25": 34.9, "AP3D@50": 10.5}, "I-JEPA-H/16": {"AP2D": 40.1, "AP3D": 39.8, "AP3D@15": 53.0, "AP3D@25": 43.1, "AP3D@50": 15.8}, "PE-Spatial-B/16": {"AP2D": 40.3, "AP3D": 39.7, "AP3D@15": 53.0, "AP3D@25": 44.0, "AP3D@50": 14.4}, "PIXIO-B/16": {"AP2D": 37.1, "AP3D": 39.63, "AP3D@15": 51.93, "AP3D@25": 42.64, "AP3D@50": 17.02}, "DINOv2-S/14": {"AP2D": 37.85, "AP3D": 40.83, "AP3D@15": 54.69, "AP3D@25": 44.56, "AP3D@50": 15.92}, "DUNE-B/14 (448px)": {"AP2D": 40.24, "AP3D": 43.1, "AP3D@15": 56.26, "AP3D@25": 47.89, "AP3D@50": 17.73}, "DINOv3-S+/16": {"AP2D": 40.34, "AP3D": 43.39, "AP3D@15": 57.75, "AP3D@25": 48.33, "AP3D@50": 17.79}, "DINOv3-B/16": {"AP2D": 43.3, "AP3D": 45.0, "AP3D@15": 58.6, "AP3D@25": 49.9, "AP3D@50": 18.8}, "DINOv2-B/14": {"AP2D": 41.08, "AP3D": 45.64, "AP3D@15": 59.8, "AP3D@25": 50.36, "AP3D@50": 19.39}, "C-RADIO-v3-B": {"AP2D": 43.81, "AP3D": 46.7, "AP3D@15": 61.14, "AP3D@25": 51.03, "AP3D@50": 19.84}, "DINOv2-L/14": {"AP2D": 43.5, "AP3D": 48.8, "AP3D@15": 62.79, "AP3D@25": 52.74, "AP3D@50": 22.0}, "DINOv3-L/16": {"AP2D": 46.63, "AP3D": 52.59, "AP3D@15": 66.54, "AP3D@25": 57.83, "AP3D@50": 25.11}}, "group": "downstream"}}, "models": {"C-RADIO-v3-B": {"is_main": true}, "C-RADIO-v3-L": {"is_main": false}, "C-RADIO-v4": {"is_main": false}, "CLIP-B/16 (DataComp)": {"is_main": false}, "CLIP-B/16 (LAION2B)": {"is_main": false}, "CLIP-B/16 (OpenAI)": {"is_main": true}, "CLIP-L/14 (DataComp)": {"is_main": false}, "CLIP-L/14 (LAION2B)": {"is_main": false}, "CLIP-L/14 (OpenAI)": {"is_main": false}, "ConvNeXt-B (FCMAE)": {"is_main": false}, "ConvNeXt-B (IN22K)": {"is_main": false}, "ConvNeXt-B (OpenCLIP)": {"is_main": false}, "ConvNeXt-B (OpenCLIP-AR)": {"is_main": false}, "CroCov2-B/16": {"is_main": true}, "DINO-B/16": {"is_main": true}, "DINO-S/16": {"is_main": false}, "DINOv2-B/14": {"is_main": true}, "DINOv2-B/14-reg": {"is_main": false}, "DINOv2-L/14": {"is_main": false}, "DINOv2-S/14": {"is_main": false}, "DINOv3-B/16": {"is_main": true}, "DINOv3-ConvNeXt-B": {"is_main": false}, "DINOv3-ConvNeXt-L": {"is_main": false}, "DINOv3-ConvNeXt-S": {"is_main": false}, "DINOv3-ConvNeXt-T": {"is_main": false}, "DINOv3-L/16 (SAT)": {"is_main": false}, "DINOv3-S+/16": {"is_main": false}, "DINOv3-S/16": {"is_main": false}, "DIY-SC (DINOv2-B/14)": {"is_main": false}, "DUNE-B/14": {"is_main": false}, "DUNE-B/14 (336px)": {"is_main": false}, "DUNE-B/14 (448px)": {"is_main": true}, "DUNE-S/14": {"is_main": false}, "DeiT3-B/16": {"is_main": false}, "DeiT3-L/16": {"is_main": false}, "I-JEPA-H/16": {"is_main": true}, "MAE-B/16": {"is_main": true}, "MAE-L/16": {"is_main": false}, "MetaCLIP2-B/16": {"is_main": false}, "MetaCLIP2-L/14": {"is_main": false}, "MetaCLIP2-S/16": {"is_main": false}, "MiDaS-L/16": {"is_main": false}, "PE-Spatial-B/16": {"is_main": true}, "PIXIO-B/16": {"is_main": true}, "PIXIO-L/16": {"is_main": false}, "Qwen2.5-VL-7B": {"is_main": false}, "SAM-B": {"is_main": false}, "SAM-L": {"is_main": false}, "SD 2.1": {"is_main": true}, "SigLIP-B/16": {"is_main": false}, "SigLIP-L/16": {"is_main": false}, "V-JEPA2-L": {"is_main": false}, "V-JEPA2.1-B": {"is_main": false}, "V-JEPA2.1-L": {"is_main": false}, "VGGT-1B": {"is_main": false}, "iBOT-B/16": {"is_main": true}, "iBOT-B/16 (IN22K)": {"is_main": false}, "iBOT-L/16": {"is_main": false}, "iBOT-L/16 (IN22K)": {"is_main": false}, "iBOT-S/16": {"is_main": false}, "DINOv3-L/16": {"is_main": false}}, "groups": {"soco_correspondence": "SOCO Correspondence", "downstream": "Downstream Tasks"}};
+
+let currentGroup = null;
+let currentTask = null;
+let selectedModels = new Set();
+let sortCol = null;
+let sortAsc = true;
+
+// Initialization
+function init() {
+  // Default: select main models
+  for (const [name, info] of Object.entries(DATA.models)) {
+    if (info.is_main) selectedModels.add(name);
+  }
+
+  renderGroupTabs();
+  // Select first group
+  const firstGroup = Object.keys(DATA.groups)[0];
+  selectGroup(firstGroup);
+}
+
+function renderGroupTabs() {
+  const container = document.getElementById("group-tabs");
+  container.innerHTML = "";
+  for (const [gid, gname] of Object.entries(DATA.groups)) {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (gid === currentGroup ? " active" : "");
+    btn.textContent = gname;
+    btn.onclick = () => selectGroup(gid);
+    container.appendChild(btn);
+  }
+}
+
+function selectGroup(gid) {
+  currentGroup = gid;
+  renderGroupTabs();
+  // Find tasks in this group
+  const taskIds = Object.keys(DATA.tasks).filter(t => DATA.tasks[t].group === gid);
+  renderTaskTabs(taskIds);
+  if (taskIds.length > 0) {
+    selectTask(taskIds[0]);
+  } else {
+    currentTask = null;
+    renderContent();
+  }
+}
+
+function renderTaskTabs(taskIds) {
+  const container = document.getElementById("task-tabs");
+  container.innerHTML = "";
+  for (const tid of taskIds) {
+    const t = DATA.tasks[tid];
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (tid === currentTask ? " active" : "");
+    btn.textContent = t.display;
+    btn.onclick = () => selectTask(tid);
+    container.appendChild(btn);
+  }
+}
+
+function selectTask(tid) {
+  currentTask = tid;
+  sortCol = null;
+  sortAsc = true;
+  // Re-render task tabs to show active
+  const taskIds = Object.keys(DATA.tasks).filter(t => DATA.tasks[t].group === currentGroup);
+  renderTaskTabs(taskIds);
+  renderModelChips();
+  renderContent();
+}
+
+function renderModelChips() {
+  const container = document.getElementById("model-chips");
+  container.innerHTML = "";
+  if (!currentTask) return;
+
+  const task = DATA.tasks[currentTask];
+  // Show models that have data for this task, plus main models always
+  const availableModels = new Set(Object.keys(task.results));
+
+  // Sort: main models first, then alphabetical
+  const sortedNames = Object.keys(DATA.models).filter(
+    n => availableModels.has(n)
+  ).sort((a, b) => {
+    const aMain = DATA.models[a].is_main ? 0 : 1;
+    const bMain = DATA.models[b].is_main ? 0 : 1;
+    if (aMain !== bMain) return aMain - bMain;
+    return a.localeCompare(b);
+  });
+
+  for (const name of sortedNames) {
+    const chip = document.createElement("span");
+    chip.className = "model-chip"
+      + (selectedModels.has(name) ? " selected" : "")
+      + (DATA.models[name].is_main ? " is-main" : "");
+    chip.textContent = name;
+    chip.onclick = () => {
+      if (selectedModels.has(name)) {
+        selectedModels.delete(name);
+      } else {
+        selectedModels.add(name);
+      }
+      renderModelChips();
+      renderContent();
+    };
+    container.appendChild(chip);
+  }
+
+  updatePresetButtons();
+}
+
+function updatePresetButtons() {
+  const mainNames = Object.keys(DATA.models).filter(n => DATA.models[n].is_main);
+  const allMain = mainNames.every(n => selectedModels.has(n));
+  document.getElementById("btn-main").classList.toggle("active", allMain && selectedModels.size === mainNames.length);
+
+  const allModels = Object.keys(DATA.models);
+  document.getElementById("btn-all").classList.toggle("active", allModels.every(n => selectedModels.has(n)));
+}
+
+function selectMainModels() {
+  selectedModels.clear();
+  for (const [name, info] of Object.entries(DATA.models)) {
+    if (info.is_main) selectedModels.add(name);
+  }
+  renderModelChips();
+  renderContent();
+}
+
+function selectAllModels() {
+  for (const name of Object.keys(DATA.models)) {
+    selectedModels.add(name);
+  }
+  renderModelChips();
+  renderContent();
+}
+
+function selectNone() {
+  selectedModels.clear();
+  renderModelChips();
+  renderContent();
+}
+
+function renderContent() {
+  const container = document.getElementById("content");
+  if (!currentTask) {
+    container.innerHTML = '<div class="no-data">Select a task to view results.</div>';
+    return;
+  }
+
+  const task = DATA.tasks[currentTask];
+  const metricKeys = Object.keys(task.metrics_meta);
+
+  // Filter to selected models that have data
+  const models = Object.keys(task.results).filter(n => selectedModels.has(n));
+
+  if (models.length === 0) {
+    container.innerHTML = `
+      <div class="task-info"><span class="task-title">${task.display}</span></div>
+      <div class="no-data">No models selected, or no data available for selected models.</div>`;
+    return;
+  }
+
+  // Compute best per metric
+  const best = {};
+  for (const mk of metricKeys) {
+    const hb = task.metrics_meta[mk].higher_better;
+    let bestVal = null;
+    for (const m of models) {
+      const v = task.results[m]?.[mk];
+      if (v == null) continue;
+      if (bestVal == null || (hb ? v > bestVal : v < bestVal)) bestVal = v;
+    }
+    best[mk] = bestVal;
+  }
+
+  // Sort
+  let sortedModels = [...models];
+  if (sortCol !== null) {
+    if (sortCol === "__model__") {
+      sortedModels.sort((a, b) => sortAsc ? a.localeCompare(b) : b.localeCompare(a));
+    } else {
+      sortedModels.sort((a, b) => {
+        const va = task.results[a]?.[sortCol] ?? null;
+        const vb = task.results[b]?.[sortCol] ?? null;
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        return sortAsc ? va - vb : vb - va;
+      });
+    }
+  }
+
+  // Count visible models
+  const nModels = sortedModels.length;
+  const nMetrics = metricKeys.length;
+
+  let html = `
+    <div class="task-info">
+      <span class="task-title">${task.display}</span>
+      <span class="task-meta">${nModels} models, ${nMetrics} metric${nMetrics > 1 ? "s" : ""}</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>`;
+
+  // Model header
+  const modelSortClass = sortCol === "__model__" ? (sortAsc ? "sorted-asc" : "sorted-desc") : "";
+  html += `<th class="${modelSortClass}" onclick="doSort('__model__')">Model<span class="sort-arrow"></span></th>`;
+
+  for (const mk of metricKeys) {
+    const meta = task.metrics_meta[mk];
+    const cls = sortCol === mk ? (sortAsc ? "sorted-asc" : "sorted-desc") : "";
+    const dir = meta.higher_better ? "higher is better" : "lower is better";
+    html += `<th class="${cls}" onclick="doSort('${mk}')">${mk}<span class="dir-hint">${dir}</span><span class="sort-arrow"></span></th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  for (const modelName of sortedModels) {
+    const isMain = DATA.models[modelName]?.is_main;
+    html += `<tr class="${isMain ? "is-main-model" : ""}">`;
+    html += `<td class="model-name">${modelName}</td>`;
+    for (const mk of metricKeys) {
+      const v = task.results[modelName]?.[mk];
+      if (v == null) {
+        html += `<td style="color:#cbd5e1;">--</td>`;
+      } else {
+        const isBest = v === best[mk];
+        html += `<td class="${isBest ? "best-val" : ""}">${v}</td>`;
+      }
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+
+  container.innerHTML = html;
+}
+
+function doSort(col) {
+  if (sortCol === col) {
+    sortAsc = !sortAsc;
+  } else {
+    sortCol = col;
+    // Default sort direction: descending for metrics (show best first), ascending for model name
+    if (col === "__model__") {
+      sortAsc = true;
+    } else {
+      const task = DATA.tasks[currentTask];
+      const meta = task.metrics_meta[col];
+      // Default: best first. If higher_better, descending. If lower_better, ascending.
+      sortAsc = !meta.higher_better;
+    }
+  }
+  renderContent();
+}
+
+init();
+</script>
+</body>
+</html>
