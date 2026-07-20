@@ -4,9 +4,11 @@
 
 **A unified framework for evaluating visual features across dense tasks**
 
-[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE) [![Results](https://img.shields.io/badge/results-live-orange.svg)](https://genintel.github.io/OmniProbe/)
 
 OmniProbe gives 25+ families of visual foundation models a *single* command-line and Python interface for probing their features on correspondence, depth, surface-normal, segmentation, pose, tracking, and classification tasks.
+
+📊 **[Browse the results table](https://genintel.github.io/OmniProbe/)** — benchmark results across models and tasks.
 
 - [Highlights](#highlights)
 - [Installation](#installation)
