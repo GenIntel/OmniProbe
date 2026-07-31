@@ -67,13 +67,15 @@ uv sync --extra clip          # one extra
 uv sync --extra all           # everything above
 ```
 
-The 3D detection task additionally requires [detectron2](https://github.com/facebookresearch/detectron2) and [PyTorch3D](https://github.com/facebookresearch/pytorch3d), which have no PyPI wheels for recent PyTorch and must be built from source against your installed torch/CUDA (they are therefore not part of any extra):
+The 3D detection task additionally requires [detectron2](https://github.com/facebookresearch/detectron2) and [PyTorch3D](https://github.com/facebookresearch/pytorch3d), which have no PyPI wheels for recent PyTorch and must be built from source against your installed torch/CUDA. Because building them requires a matching CUDA toolchain that can't be guaranteed on every machine, they are **not** tracked in `uv.lock` or any extra — install the extra first, then add them with `uv pip install`:
 
 ```bash
-pip install "git+https://github.com/facebookresearch/detectron2.git" --no-build-isolation
-pip install "git+https://github.com/facebookresearch/pytorch3d.git" --no-build-isolation
-pip install -e ".[detection3d]"
+uv sync --extra detection3d
+uv pip install "git+https://github.com/facebookresearch/detectron2.git" --no-build-isolation
+uv pip install "git+https://github.com/facebookresearch/pytorch3d.git" --no-build-isolation
 ```
+
+Run `uv sync --extra detection3d` first: by default `uv sync` removes packages that aren't in the lockfile, so installing detectron2/pytorch3d before syncing (or re-syncing later without `--inexact`) would immediately uninstall them again. If you resync after pulling changes, either add `--inexact` or reinstall the two packages afterward.
 
 Build requirements: `CUDA_HOME` must point to a CUDA toolkit whose major version matches your torch build (e.g. CUDA 12.x for `torch+cu12x`), with a host compiler nvcc accepts (GCC ≤ 13 for CUDA 12). On a machine without a GPU, set `TORCH_CUDA_ARCH_LIST` (e.g. `"8.0;9.0"` for A100/H100) so the extensions are compiled for the GPUs you will run on.
 
