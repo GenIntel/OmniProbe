@@ -18,7 +18,6 @@ OmniProbe gives 25+ families of visual foundation models a *single* command-line
   - [Backbones](#backbones)
 - [Usage](#usage)
   - [Command line](#command-line)
-  - [3D detection (Omni3D)](#3d-detection-omni3d)
   - [Python API](#python-api)
   - [Configs](#configs)
 - [Datasets \& paths](#datasets--paths)
@@ -142,6 +141,8 @@ omniprobe --list-backbones
 | Tracking | TAP-Vid DAVIS |
 | Classification | ImageNet |
 
+See **[docs/TASKS.md](./docs/TASKS.md)** for the per-task config list and usage details (including the 3D detection setup).
+
 ### Backbones
 
 87 configs across the families below. Pass any config name as `backbone=<name>`; see **[docs/MODELS.md](./docs/MODELS.md)** for the full per-config table (weight source and supported output modes).
@@ -195,47 +196,10 @@ python -m omniprobe.run task=segmentation_ade20k backbone=dinov2_b14
 # ImageNet classification
 python -m omniprobe.run task=classification_imagenet_knn    backbone=dinov2_b14 task.data_root=/path/to/imagenet
 python -m omniprobe.run task=classification_imagenet_linear backbone=dinov2_b14 task.data_root=/path/to/imagenet
-```
 
-### 3D detection (Omni3D)
-
-The 3D detection task trains Cube R-CNN heads on top of a frozen backbone and reports AP2D/AP3D. It needs two things the other tasks don't:
-
-1. **Extra dependencies** — detectron2 and PyTorch3D built from source plus the `detection3d` extra; see the install commands in [Installation](#installation).
-2. **The Omni3D data** — annotations and ARKitScenes images under `OMNI3D_ROOT`; see [data_processing/README.md](./data_processing/README.md#omni3d-3d-detection) for the download and layout.
-
-Training and evaluation on ARKitScenes (the default):
-
-```bash
-# full training run (ARKitScenes, frozen backbone, 116k iterations)
+# 3D detection (Omni3D) — needs extra dependencies + data. See docs/TASKS.md.
 python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14
-
-# multi-GPU: single node, N processes; solver.ims_per_batch is the TOTAL
-# batch size across GPUs (default: num_gpus=4, ims_per_batch=32)
-python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
-  task.system.num_gpus=4
-
-# evaluate a trained checkpoint (no training); visualize_predictions
-# additionally renders 3D cuboid overlays + BEV for every 50th test image
-# into <run_dir>/inference/iter_final/<dataset>/vis/
-python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
-  task.eval_only=true task.weights=/path/to/model_final.pth \
-  task.visualize_predictions=true
-
-# resume an interrupted run: reuse its output directory
-python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
-  task.resume=true hydra.run.dir=outputs/<date>/<time>_detection3d_omni3d_dinov2_b14
 ```
-
-**Other Omni3D datasets.** Preset tasks cover the standard splits — `detection3d_omni3d_in` (SUN RGB-D + Hypersim + ARKitScenes, 38 categories), `detection3d_omni3d_out` (nuScenes + KITTI, 11), and `detection3d_omni3d_full` (all six, 50); run them exactly like the default task once the corresponding datasets are downloaded. For custom combinations, override the dataset lists and let the category set resolve from a preset name (`omni3d`, `omni3d_in`, `omni3d_out`, or any split name):
-
-```bash
-python -m omniprobe.run task=detection3d_omni3d backbone=dinov2_b14 \
-  'task.datasets.train=[KITTI_train,KITTI_val]' 'task.datasets.test=[KITTI_test]' \
-  task.datasets.category_names=KITTI_test task.datasets.num_classes=null
-```
-
-When evaluating a checkpoint, keep `category_names`/`num_classes` matching the training run — the detection heads are sized for those categories. The default solver follows the frozen-backbone ARKitScenes recipe (AdamW 1e-3, batch 32, 116k iterations); the upstream Cube R-CNN recipe used larger batches for the bigger splits (128 indoor, 192 full), so expect to tune batch/lr/iterations there.
 
 ### Python API
 

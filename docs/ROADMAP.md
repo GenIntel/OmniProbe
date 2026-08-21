@@ -6,6 +6,7 @@ Missing something you'd like to see? Open a pull request or raise an issue — s
 
 ## New tasks
 
+- 2D detection
 - 3D reconstruction
 - video segmentation
 
@@ -20,3 +21,4 @@ Missing something you'd like to see? Open a pull request or raise an issue — s
 
 - Feature concatenation
 - Feature upsampling
+- Support of more probes
