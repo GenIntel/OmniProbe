@@ -26,6 +26,8 @@ def build_script_cfg(
         script_cfg.task_name = str(cfg.task.name)
         script_cfg.image_mean = str(cfg.backbone.image_mean)
         script_cfg.output_dir = str(resolve_output_dir())
+        if "results_dir" in cfg:
+            script_cfg.results_dir = str(cfg.results_dir)
 
     if "device" in cfg:
         resolved_device = str(resolve_device(str(cfg.device)))

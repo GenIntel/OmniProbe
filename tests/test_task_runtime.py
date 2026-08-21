@@ -154,12 +154,14 @@ def test_default_run_output_root_stays_outputs():
 
 def test_task_defaults_override_script_defaults():
     cfg = _dense_cfg("correspondence_spair")
+    cfg.results_dir = "/tmp/results"
     cfg.task.eval_before_training = False
     cfg.task.num_instances = None
     cfg.task.eval_num_instances = None
     script_cfg = build_script_cfg(cfg)
     assert script_cfg.task_name == "correspondence_spair"
     assert script_cfg.output_dir
+    assert script_cfg.results_dir == "/tmp/results"
     assert script_cfg.eval_before_training is False
     assert script_cfg.num_instances is None
     assert script_cfg.eval_num_instances is None
