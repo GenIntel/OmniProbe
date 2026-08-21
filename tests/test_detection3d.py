@@ -133,6 +133,7 @@ def test_task_script_imports_without_detectron2():
 
 
 def test_resolve_category_names_presets():
+    pytest.importorskip("pycocotools")
     from omniprobe.scripts.train_detection3d_omni3d import resolve_category_names
 
     assert len(resolve_category_names("omni3d")) == 50

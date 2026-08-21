@@ -502,6 +502,7 @@ _FAKE_SAM_REGISTRY = {
 @pytest.fixture
 def fake_sam(monkeypatch, tmp_path):
     """Patch SAM registry and checkpoint path with tiny fake image encoder."""
+    pytest.importorskip("segment_anything")
     ckpt_file = tmp_path / "sam_vit_b_01ec64.pth"
     ckpt_file.write_bytes(b"")
     monkeypatch.setattr("omniprobe.models.sam.resolve_pretrained_path",

@@ -38,7 +38,6 @@ _BACKBONE_MODULES = [
     "omniprobe.models.midas_final",
     "omniprobe.models.perception",
     "omniprobe.models.pixio",
-    "omniprobe.models.sam",
     "omniprobe.models.siglip",
     "omniprobe.models.vggt",
     "omniprobe.models.vjepa2",
@@ -49,6 +48,7 @@ _BACKBONE_MODULES = [
 # and otherwise actually imports the module.
 _OPTIONAL_BACKBONE_MODULES = [
     ("omniprobe.models.lvlm_visual", "transformers"),     # VL bindings
+    ("omniprobe.models.sam", "segment_anything"),          # SAM backbone
     ("omniprobe.models.stablediffusion", "diffusers"),    # latent diffusion
 ]
 
